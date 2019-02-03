@@ -1,6 +1,9 @@
 from socket import *
 import numpy as np
+import sys
 import re
+
+d = True if '-d' in sys.argv else False
 
 # Connect to the server
 serverName = ''
@@ -9,60 +12,77 @@ clientSocket = socket(AF_INET, SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
 print ('Connected to Server')
 
-# Make the request and receive the response
-while True:
-    user_input = re.split(' ', raw_input('> '))
-    req = user_input[0]
-    args = (len(user_input) > 1 ? user_input[1:len(user_input)] : [])
-    resp = sendRequest(clientSocket, req, len(args))
+def debug(call, req, resp):
+    if d:
+        print('Call: '+ call+'\tRequest: '+req+'\tResponse: '+resp)
+    return resp
 
-    if resp == -1:
-        continue
-    elif req in ['k','q']:
+def error(call, req, message):
+    if d:
+        print('Call: '+ call+'\tRequest: '+req+'\tError: '+message)
+    return message
+    
+def sendRequest(socket, message):
+    debug('sendRequest',message,'N/A')
+    socket.send(message.encode())
+
+def sendArgumentsTo(socket, args):
+    for arg in args:
+        sendRequest(socket,arg)
+    return debug('sendArgumentsTo','None',0)
+
+def getResponseTo(socket, request, have):
+    req = request[0]
+    sendRequest(socket,req)
+    need = socket.recv(1024).decode()
+    if have == need:
+        sendRequest(socket, 'OK')
+    else:
+        sendArguments(socket, request[1:
+
+
+    resp = getResponseTo(socket, req)
+    if resp != 'OK':
+        return error('getResponseTo',req,resp)
+    resp = getResponseTo(socket, arglen)
+    if resp != 'READY':
+        return error('getResponseTo',req,resp)
+    return debug('getResponseTo',req,'READY')
+    err = 'INVALID_REQUEST\nFor help, enter [h].'
+    return error('getResponseTo', req, err)
+
+
+## Start of the client program ##
+while True:
+    request = re.split(' ', raw_input('> '))
+    req = request[0]
+
+    if req in ['k','q']:
+        resp = getResponseTo(clientSocket,request,'ARGS_0')
+        debug('main',req,resp)
         clientSocket.close()
         break
+    elif req in ['h','r']:
+        resp = getResponseTo(clientSocket,request,'ARGS_0')
+    elif req in ['d','g']:
+        resp = getResponseTo(clientSocket,request,'ARGS_1')
+    elif req in ['c']:
+        resp = getResponseTo(clientSocket,request,'ARGS_2')
     elif req == 'p':
         tags = raw_input('')
         question = raw_input('')
         print('.')
         a = raw_input('(a) ')
         print('.')
-        b = raw_input('(a) ')
+        b = raw_input('(b) ')
         print('.')
-        c = raw_input('(a) ')
+        c = raw_input('(c) ')
         print('.')
-        d = raw_input('(a) ')
+        d = raw_input('(d) ')
         print('.\n.')
         correct = raw_input('')
-        newQuestion = [tags,question,a,b,c,d,correct]
-        resp = sendArgumentsTo(clientSocket, newQuestion)
+        newQuestion = [req,tags,question,a,b,c,d,correct]
+        resp = getResponseTo(clientSocket, newQuestion,'ARGS_7')
     else:
         resp = sendArgumentsTo(clientSocket, args)
-
-    print(resp)
-
-
-def sendRequest(socket, req, arglen):
-    if req in ['k','q','p','d','g','r','c','h']:
-        resp = getResponseTo(socket, req)
-        if resp != 'OK':
-            print('Error: ', resp)
-            return -1
-        resp = getResponseTo(socket, arglen)
-        if resp != 'READY':
-            print('Error: ', resp)
-            return -1
-        return 'READY'
-    else:
-        print ('Error: INVALID_REQUEST')
-        print ('For help, enter [h].')
-        return -1
-
-def sendArgumentsTo(socket, args):
-    for arg in args:
-        
-
-def getResponseTo(socket, req):
-    socket.send(req.encode())
-    response = socket.recv(1024).decode()
-    return response
+    print(debug('main',req,resp))

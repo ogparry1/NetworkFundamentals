@@ -1,13 +1,85 @@
 from socket import *
+import sys
 import re
 import json
 
 terminate = False
+d = True if '-d' in sys.argv else False
 
 serverPort = 12000
 serverSocket = socket(AF_INET,SOCK_STREAM)
 serverSocket.bind(('',serverPort))
 serverSocket.listen(1)
+
+## Server Functions ##
+
+def debug(call, req, resp):
+    if d:
+        print ('Call: ' + call + '\tRecieved: ' + req + '\tResponse: ' + resp)
+    return resp
+
+def error(call, req, message):
+    if d:
+        print ('Call: ' + call + '\tRecieved: ' + req + '\tError: ' + message)
+    return message
+
+def sendResponse(socket, message):
+    debug('sendResponse', 'N/A', message)
+    socket.send(message.encode())
+
+def getArguments(socket, need, have, argnum):
+    # loop through receiving all arguments
+    arguments = []
+    for i in range(argnum):
+        resp = socket.recv(1024).decode() 
+        arguments = arguments + resp
+    return arguments
+
+def getRequest(socket):
+    # get request type
+    req = socket.recv(1024).decode() 
+    request = [req]
+    if req in ['k','q','h','r']:
+        resp = debug('getRequest', req, 'ARGS_0')
+        sendResponse(socket, resp)
+        req = socket.recv(1024).decode()
+        if req == 'OK':
+            args = getArguments(socket, 0)
+            request = request + args
+    elif req in ['d','g']:
+        resp = debug('getRequest', req, 'ARGS_1')
+        sendResponse(socket, resp)
+        req = socket.recv(1024).decode() 
+        if req == 'OK':
+            args = getArguments(socket, 1)
+            request = request + args
+    elif req in ['c']:
+        resp = debug('getRequest', req, 'ARGS_2')
+        sendResponse(socket, resp)
+        req = socket.recv(1024).decode() 
+        if req == 'OK':
+            args = getArguments(socket, 2)
+            request = request + args
+    elif req in ['p']:
+        resp = debug('getRequest', req, 'ARGS_7')
+        sendResponse(socket, resp)
+        req = socket.recv(1024).decode() 
+        if req == 'OK':
+            args = getArguments(socket, 7)
+            request = request + args
+    else:
+        resp = error('getRequest', req, 'INVALID_REQUEST')
+        sendResponse(socket, resp)
+        return resp
+    return request
+
+def helpPage():
+    debug('helpPage', 'N/A', 'N/A')
+    helpPage = 'Help Page Goes Here'
+    return helpPage
+
+
+## Start of the Program ##
 
 print('The server is ready to receive')
 while True:
@@ -15,97 +87,44 @@ while True:
         break
 
     connectionSocket, addr = serverSocket.accept()
-    print ('Connected to Client')
+    print('Connected to Client')
 
     while True:
         # Get a request
-        req = getRequest(connectionSocket)
+        request = getRequest(connectionSocket)
+        req = request[0]
 
         # Take arguments and service the request
-        if req == -1:
+        if req == 'INVALID_REQUEST' or req == 'INVALID_ARGS':
             continue
         elif req == 'k':
-            args = getArguments(connectionSocket, 0)
+            sendResponse(connectionSocket,'OK')
             connectionSocket.close()
             terminate = True
             break
         elif req == 'q':
-            args = getArguments(connectionSocket, 0)
+            sendResponse(connectionSocket,'OK')
             connectionSocket.close()
             break
         elif req == 'p':
-            args = getArguments(connectionSocket, 7)
-            tags = re.split(',|, ', args[0])
-            question = args[1]
-            answers = args[2:5]
-            correct = args[6]
+            tags = re.split(',|, ', request[1])
+            question = request[2]
+            answers = request[3:6]
+            correct = request[7]
 
-            # Create a persistent entry for the question and return the number of the question
-            tempNum = 1
-            sendResponse(connectionSocket, tempNum)
+            # temporary response
+            sendResponse(connectionSocket, req)
         elif req == 'd':
-            args = getArguments(connectionSocket, 1)
-
             # temporary response
-            tempNum = 1
-            sendResponse(connectionSocket, tempNum)
+            sendResponse(connectionSocket, req)
         elif req == 'g':
-            args = getArguments(connectionSocket, 1)
-
             # temporary response
-            tempNum = 1
-            sendResponse(connectionSocket, tempNum)
+            sendResponse(connectionSocket, req)
         elif req == 'c':
-            args = getArguments(connectionSocket, 2)
-
             # temporary response
-            tempNum = 1
-            sendResponse(connectionSocket, tempNum)
+            sendResponse(connectionSocket, req)
         elif req == 'r':
-            args = getArguments(connectionSocket, 0)
-
             # temporary response
-            tempNum = 1
-            sendResponse(connectionSocket, tempNum)
+            sendResponse(connectionSocket, req)
         else:
-            args = getArguments(connectionSocket, 0)
             sendResponse(helpPage())
-
-
-def getRequest(socket):
-    req = socket.recv(1024).decode() 
-    sendResponse(socket,'OK')
-    reqnum = socket.recv(1024).decode() 
-    if req in ['k','q','h','r'] and reqnum == 0:
-        sendResponse(socket, 'READY')
-        return -1
-    elif req in ['d','g'] and reqnum == 1:
-    elif req in ['c'] and reqnum == 2:
-    elif req in ['p'] and reqnum == 7:
-    else:
-        sendResponse(socket, 'INVALID_NUM_ARGS')
-        return -1
-
-def getArguments(socket, numNeeded):
-    resp = socket.recv(1024).decode() 
-    arguments = []
-    if resp < numNeeded:
-        sendResponse(socket, 'INSUFFICIENT_ARGUMENTS')
-        return -1
-    elif resp > numNeeded:
-        sendResponse(socket, 'TOO_MANY_ARGUMENTS')
-        return -1
-    else:
-        sendResponse(socket, 'READY')
-        for i in range(numNeeded):
-            resp = socket.recv(1024).decode() 
-            arguments = arguments + resp
-            sendResponse(socket, 'RECEIVED')
-        return arguments
-
-def sendResponse(socket, message):
-    socket.send(message.encode())
-
-def helpPage():
-    helpPage = 'Help Page Goes Here'
-    return helpPage
