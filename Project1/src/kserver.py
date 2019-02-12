@@ -6,14 +6,39 @@ terminate = False
 d = True if '-d' in sys.argv else False
 conn = sql.connect('project1.db')
 db = conn.cursor()
-checkTables = db.execute("SELECT count(*) FROM sqlite_master;")
-print(checkTables)
-if checkTables == '0':
-    print('Creating Tables')
+
+def debug(info):
+    if d:
+        print(info)
+
+def dbGetExecute(cmd):
+    db.execute(cmd)
+    conn.commit()
+
+def dbGetLowestNumber():
+    db.execute('SELECT Number FROM Questions;')
+    conn.commit()
+    nums = db.fetchone()
+    debug('Numbers')
+    debug(nums)
+    least = 1
+    for i in range(1,len(nums)):
+        if nums[i-1] != i:
+            debug('returning ' + str(i))
+            return i
+    debug('returning ' + str(len(nums)+1))
+    return len(nums)+1
+
+db.execute("SELECT count(*) FROM sqlite_master;")
+conn.commit()
+checkTables = db.fetchone() 
+if checkTables[0] == 0:
+    debug('Creating Tables')
     db.execute("CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);")
     db.execute("CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);")
     db.execute("CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);")
     conn.commit()
+    debug('Tables Created')
 
 serverPort = 12000
 serverSocket = socket(AF_INET,SOCK_STREAM)
@@ -36,11 +61,20 @@ def buildResponse(arr):
     return response
 
 def addQuestion(newQuestion):
-    qNum = -1
+    num = dbGetLowestNumber()
     tags = re.split(',|, ', request[1])
     question = request[2]
     answers = request[3:6]
     correct = request[7]
+
+    qinsert = tinsert = ainsert = []
+    qinsert.append(num).append(question).append(correct)
+    tinsert.append(num).append(tags)
+    ainsert.append(num).append(answers)
+
+    db.execute("INSERT INTO Questions VALUES (?,?,?)", qinsert)
+    db.execute("INSERT INTO Tags VALUES (?,?,?,?,?,?)", tinsert)
+    db.execute("INSERT INTO Answers VALUES (?,?,?,?,?)", ainsert)
     
     return str(qNum)
 
