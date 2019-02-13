@@ -1,86 +1,184 @@
 from socket import *
-import sys
-import re
-import json
+import sys, re, json, io
+import sqlite3 as sql
+import random as rand
+import numpy as np
+
+def debug(info):
+    if d:
+        print(info)
 
 terminate = False
 d = True if '-d' in sys.argv else False
+conn = sql.connect('project1.db')
+db = conn.cursor()
 
+db.execute("SELECT count(*) FROM sqlite_master;")
+conn.commit()
+checkTables = db.fetchone() 
+if checkTables[0] == 0:
+    debug('Creating Tables')
+    db.execute("CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);")
+    db.execute("CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);")
+    db.execute("CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);")
+    conn.commit()
+    debug('Tables Created')
+
+hostname = 'localhost'
 serverPort = 12000
 serverSocket = socket(AF_INET,SOCK_STREAM)
-serverSocket.bind(('',serverPort))
+while True:
+    debug("Trying port " + str(serverPort) + "...")
+    try:
+        serverSocket.bind((hostname,serverPort))
+        print("Server bound to localhost:" + str(serverPort))
+        break
+    except:
+        serverPort += 1
+        continue
 serverSocket.listen(1)
 
+def dbGetLowestNumber():
+    db.execute('SELECT Number FROM Questions;')
+    conn.commit()
+    nums = db.fetchone()
+    if nums == None:
+        return 1
+    debug(nums)
+    debug('Numbers')
+    least = 1
+    for i in range(0,len(nums)):
+        debug(str(nums[i]) + " " + str(i+1))
+        if nums[i] != i+1:
+            debug('returning ' + str(i+1))
+            return i+1
+    debug('returning ' + str(len(nums)+1))
+    return len(nums)+1
+
+def dbGetQuestionExists(n):
+    num = (str(n),)
+    db.execute("SELECT count(*) FROM Questions WHERE Number=?", num)
+    conn.commit()
+    result = db.fetchone()
+    return result[0]
+
 ## Server Functions ##
-
-def debug(call, req, resp):
-    if d:
-        print ('Call: ' + call + '\tRecieved: ' + req + '\tResponse: ' + resp)
-    return resp
-
-def error(call, req, message):
-    if d:
-        print ('Call: ' + call + '\tRecieved: ' + req + '\tError: ' + message)
-    return message
-
 def sendResponse(socket, message):
-    debug('sendResponse', 'N/A', message)
     socket.send(message.encode())
 
-def getArguments(socket, need, have, argnum):
-    # loop through receiving all arguments
-    arguments = []
-    for i in range(argnum):
-        resp = socket.recv(1024).decode() 
-        arguments = arguments + resp
-    return arguments
-
 def getRequest(socket):
-    # get request type
     req = socket.recv(1024).decode() 
-    request = [req]
-    if req in ['k','q','h','r']:
-        resp = debug('getRequest', req, 'ARGS_0')
-        sendResponse(socket, resp)
-        req = socket.recv(1024).decode()
-        if req == 'OK':
-            args = getArguments(socket, 0)
-            request = request + args
-    elif req in ['d','g']:
-        resp = debug('getRequest', req, 'ARGS_1')
-        sendResponse(socket, resp)
-        req = socket.recv(1024).decode() 
-        if req == 'OK':
-            args = getArguments(socket, 1)
-            request = request + args
-    elif req in ['c']:
-        resp = debug('getRequest', req, 'ARGS_2')
-        sendResponse(socket, resp)
-        req = socket.recv(1024).decode() 
-        if req == 'OK':
-            args = getArguments(socket, 2)
-            request = request + args
-    elif req in ['p']:
-        resp = debug('getRequest', req, 'ARGS_7')
-        sendResponse(socket, resp)
-        req = socket.recv(1024).decode() 
-        if req == 'OK':
-            args = getArguments(socket, 7)
-            request = request + args
-    else:
-        resp = error('getRequest', req, 'INVALID_REQUEST')
-        sendResponse(socket, resp)
-        return resp
-    return request
+    result = re.split("\\\\",req)
+    return result
+
+def buildResponse(arr):
+    response = ''
+    for e in arr:
+        response = response + e + '\n'
+    return response
+
+def addQuestion(newQuestion):
+    num = dbGetLowestNumber()
+    tags = re.split(',|, ', request[1])
+    debug(tags)
+    while len(tags) < 5:
+        tags.append('')
+    debug(tags)
+    question = request[2]
+    answers = request[3:7]
+    correct = request[7]
+
+    qinsert = [num]
+    tinsert = [num]
+    ainsert = [num]
+    qinsert.append(question)
+    qinsert.append(correct.lower())
+    tinsert = np.concatenate([tinsert,tags])
+    ainsert = np.concatenate([ainsert,answers])
+
+    debug('Inserts:')
+    debug(qinsert)
+    debug(tinsert)
+    debug(ainsert)
+    db.execute("INSERT INTO Questions VALUES (?,?,?);", qinsert)
+    db.execute("INSERT INTO Tags VALUES (?,?,?,?,?,?);", tinsert)
+    db.execute("INSERT INTO Answers VALUES (?,?,?,?,?);", ainsert)
+    conn.commit()
+    
+    return str(num)
+
+def deleteQuestion(num):
+    result = 'Error: Question ' + num + ' not found.'
+    exists = dbGetQuestionExists(num)
+    if exists:
+        val = (num,)
+        db.execute("DELETE FROM Questions WHERE Number=?;", val)
+        db.execute("DELETE FROM Tags WHERE Number=?;", val)
+        db.execute("DELETE FROM Answers WHERE Number=?;", val)
+        conn.commit()
+        result = 'Deleted question ' + str(num)
+
+    return result
+
+def getQuestion(num):
+    question = 'Error: Question ' + str(num) + ' not found.'
+    exists = dbGetQuestionExists(num)
+    if exists:
+        db.execute("SELECT * FROM Questions WHERE Number=?", (num,))
+        conn.commit()
+        questions = db.fetchone()
+
+        db.execute("SELECT * FROM Tags WHERE Number=?", (num,))
+        conn.commit()
+        tags = db.fetchone()
+
+        db.execute("SELECT * FROM Answers WHERE Number=?", (num,))
+        conn.commit()
+        answers = db.fetchone()
+
+        question = str(num) + '\n'
+        for tag in tags[1:]:
+            if tag != '':
+                question = question + str(tag) + ', '
+        question = question[:-2] + '\n' + questions[1] + '\n.\n'
+        question = question + '(a) ' + answers[1] + '\n.\n'
+        question = question + '(b) ' + answers[2] + '\n.\n'
+        question = question + '(c) ' + answers[3] + '\n.\n'
+        question = question + '(d) ' + answers[4] + '\n.\n.'
+
+    return question
+
+def getRandomQuestion():
+    question = 'Error: No questions exist'
+    db.execute("SELECT count(*) FROM Questions;")
+    conn.commit()
+    total = db.fetchone()
+    if total[0] > 0:
+        index = rand.randint(0,total[0]-1)
+        db.execute("SELECT Number FROM Questions;")
+        conn.commit()
+        nums = db.fetchall()
+        debug(nums)
+        debug('value = ' + str(nums[index][0]))
+        question = getQuestion(nums[index][0])
+    return question
+
+def checkAnswer(num, ans):
+    result = 'Error: Question ' + num + ' not found.'
+    exists = dbGetQuestionExists(num)
+    if exists:
+        val = (num,)
+        db.execute("SELECT Correct FROM Questions WHERE Number=?;", val)
+        conn.commit()
+        correct = db.fetchone()
+        result = 'Correct' if ans.lower() == correct[0] else 'Incorrect'
+    return result
 
 def helpPage():
-    debug('helpPage', 'N/A', 'N/A')
-    helpPage = 'Help Page Goes Here'
-    return helpPage
-
+    hPage = 'Help Page'
+    return hPage
 
 ## Start of the Program ##
-
 print('The server is ready to receive')
 while True:
     if terminate:
@@ -92,39 +190,38 @@ while True:
     while True:
         # Get a request
         request = getRequest(connectionSocket)
+        debug(request)
         req = request[0]
 
         # Take arguments and service the request
-        if req == 'INVALID_REQUEST' or req == 'INVALID_ARGS':
-            continue
-        elif req == 'k':
-            sendResponse(connectionSocket,'OK')
+        if req in ['k','kill']:
+            sendResponse(connectionSocket,'EXIT')
             connectionSocket.close()
             terminate = True
+            conn.close()
             break
-        elif req == 'q':
-            sendResponse(connectionSocket,'OK')
+        elif req in ['q','quit']:
+            sendResponse(connectionSocket,'EXIT')
             connectionSocket.close()
             break
-        elif req == 'p':
-            tags = re.split(',|, ', request[1])
-            question = request[2]
-            answers = request[3:6]
-            correct = request[7]
-
-            # temporary response
-            sendResponse(connectionSocket, req)
-        elif req == 'd':
-            # temporary response
-            sendResponse(connectionSocket, req)
-        elif req == 'g':
-            # temporary response
-            sendResponse(connectionSocket, req)
-        elif req == 'c':
-            # temporary response
-            sendResponse(connectionSocket, req)
-        elif req == 'r':
-            # temporary response
-            sendResponse(connectionSocket, req)
+        elif req in ['p','put']:
+            response = addQuestion(request)
+            sendResponse(connectionSocket, str(response))
+        elif req in ['d','delete']:
+            response = deleteQuestion(request[1])
+            sendResponse(connectionSocket, response)
+        elif req in ['g','get']:
+            response = getQuestion(request[1])
+            sendResponse(connectionSocket, response)
+        elif req in ['c','check']:
+            response = checkAnswer(request[1], request[2])
+            sendResponse(connectionSocket, response)
+        elif req in ['r','random']:
+            response = getRandomQuestion()
+            sendResponse(connectionSocket, response)
+        elif req in ['h','help']:
+            response = helpPage()
+            sendResponse(connectionSocket, response)
         else:
-            sendResponse(helpPage())
+            sendResponse(connectionSocket, 'Error: Invalid Request')
+            continue

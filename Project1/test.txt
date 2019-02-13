@@ -1,6 +1,12 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);
+INSERT INTO Questions VALUES(1,'When was the Protestant Revolution?','d');
+INSERT INTO Questions VALUES(2,'Flash','a');
 CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);
+INSERT INTO Tags VALUES(1,'religion','','','','');
+INSERT INTO Tags VALUES(2,'test','','','','');
 CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);
+INSERT INTO Answers VALUES(1,'1833','50','1938','1500');
+INSERT INTO Answers VALUES(2,'Barry','Jimmy ','Ricky','James');
 COMMIT;
