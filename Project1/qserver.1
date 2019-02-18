@@ -1,16 +1,62 @@
-NAME
-    The name of the command or function, followed by a one-line description of what it does.
-SYNOPSIS
-    In the case of a command, you get a formal description of how to run it and what command line options it takes.
-DESCRIPTION
-    A textual description of the functioning of the command or function.
-EXAMPLES
-    Some examples of common usage.
-SEE ALSO
-    A list of related commands or functions.
-BUGS
-    List known bugs.
-AUTHOR
-   Specify your contact information.
-COPYRIGHT
-    Specify your copyright information.
+.TH QSERVER 1
+.SH NAME
+qserver - Quiz server that handles question requests, answers, and storage
+.SH SYNOPSIS
+.B qserver
+[\fB\-d\fR]
+[\fB\-n\fR \fIhostname\fR]
+[\fB\-p\fR \fIport\fR]
+.SH DESCRIPTION
+.B qserver
+is the quiz server used in conjunction with qclient to provide the user assess to a simple quiz program.  On start, the server will attach itself to an sqlite3 database named project1.db by default.  It checks to see if the database has been setup properly and procededs to either move onto connecting to a socket or inserting the correct tables into the database.  The program then connects to storm.cise.ufl.edu:12000 by default or on the first available port above the specified port.  It then listens on the socket for a connection request until it recieves one or is terminated. 
+
+Once connected to a client, it will process requests. \.TS
+tab (@);
+l lx.
+(PUT)  | > p@T{
+:: add or put a new question into the database \
+T}
+@T{
+:: returns question id \
+T}
+(DEL)  | > d <n>@T{
+:: delete question n \
+T}
+@T{
+:: returns success/failure message \
+T}
+(GET)  | > g <n>@T{
+:: get question n \
+T}
+@T{
+:: returns id, tags, question, and choices \
+T}
+(RAND) | >@T{
+:: same as get but n is randomly choosen \
+T}
+@T{
+:: returns id, tags, question, and choices \
+T}
+(CHK)  | > c <n> <x>@T{
+:: checks if x is the answer to question n  \
+T}
+@T{
+:: returns Correct or Incorrect \
+T}
+(HELP) | > h@T{
+:: returns the help page \
+T}
+(KILL) | > k@T{
+:: client disconnects and server process is terminated \
+T}
+(QUIT) | > q@T{
+:: client disconnects and server listens for a new client connection
+T}
+
+.SH EXAMPLES
+
+
+.SH SEE ALSO
+qclient(1), qbank(5)
+.SH AUTHOR
+John Parry, ogparry1@ufl.edu
