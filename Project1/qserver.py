@@ -8,36 +8,6 @@ def debug(info):
     if d:
         print(info)
 
-terminate = False
-d = True if '-d' in sys.argv else False
-conn = sql.connect('project1.db')
-db = conn.cursor()
-
-db.execute("SELECT count(*) FROM sqlite_master;")
-conn.commit()
-checkTables = db.fetchone() 
-if checkTables[0] == 0:
-    debug('Creating Tables')
-    db.execute("CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);")
-    db.execute("CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);")
-    db.execute("CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);")
-    conn.commit()
-    debug('Tables Created')
-
-hostname = 'storm.cise.ufl.edu'
-serverPort = 12000
-serverSocket = socket(AF_INET,SOCK_STREAM)
-while True:
-    debug("Trying port " + str(serverPort) + "...")
-    try:
-        serverSocket.bind((hostname,serverPort))
-        print("Server bound to storm.cise.ufl.edu at port " + str(serverPort))
-        break
-    except:
-        serverPort += 1
-        continue
-serverSocket.listen(1)
-
 def dbGetLowestNumber():
     db.execute('SELECT Number FROM Questions;')
     conn.commit()
@@ -179,7 +149,38 @@ def helpPage():
     return page
 
 ## Start of the Program ##
+terminate = False
+d = True if '-d' in sys.argv else False
+conn = sql.connect('project1.db')
+db = conn.cursor()
+
+db.execute("SELECT count(*) FROM sqlite_master;")
+conn.commit()
+checkTables = db.fetchone() 
+if checkTables[0] == 0:
+    debug('Creating Tables')
+    db.execute("CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);")
+    db.execute("CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);")
+    db.execute("CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);")
+    conn.commit()
+    debug('Tables Created')
+
+hostname = 'storm.cise.ufl.edu'
+serverPort = 12000
+serverSocket = socket(AF_INET,SOCK_STREAM)
+while True:
+    debug("Trying port " + str(serverPort) + "...")
+    try:
+        serverSocket.bind((hostname,serverPort))
+        print("Server bound to storm.cise.ufl.edu at port " + str(serverPort))
+        break
+    except:
+        serverPort += 1
+        continue
+serverSocket.listen(1)
 print('The server is ready to receive')
+print('Waiting on client...')
+
 while True:
     if terminate:
         break
@@ -199,10 +200,14 @@ while True:
             connectionSocket.close()
             terminate = True
             conn.close()
+            print('Client disconnected')
+            print('Terminating server...')
             break
         elif req in ['q','quit']:
             sendResponse(connectionSocket,'EXIT')
             connectionSocket.close()
+            print('Client disconnected')
+            print('Waiting on client...')
             break
         elif req in ['p','put']:
             try:
