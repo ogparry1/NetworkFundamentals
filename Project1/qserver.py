@@ -165,8 +165,8 @@ if checkTables[0] == 0:
     conn.commit()
     debug('Tables Created')
 
-hostname = 'storm.cise.ufl.edu'
-serverPort = 12000
+hostname = 'storm.cise.ufl.edu' if '-h' not in sys.argv else sys.argv[sys.argv.index('-h')]
+serverPort = 12000 if '-p' not in sys.argv else sys.argv[sys.argv.index('-p')]
 serverSocket = socket(AF_INET,SOCK_STREAM)
 while True:
     debug("Trying port " + str(serverPort) + "...")
