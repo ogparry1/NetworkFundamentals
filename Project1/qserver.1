@@ -18,31 +18,31 @@ l lx.
 (PUT)  | > p@T{
 :: add or put a new question into the database 
 T}
-return@T{
+@T{
 :: returns question id 
 T}
 (DEL)  | > d <n>@T{
 :: delete question n 
 T}
-return@T{
+@T{
 :: returns success/failure message 
 T}
 (GET)  | > g <n>@T{
 :: get question n 
 T}
-return@T{
+@T{
 :: returns id, tags, question, and choices 
 T}
 (RAND) | >@T{
 :: same as get but n is randomly choosen 
 T}
-return@T{
+@T{
 :: returns id, tags, question, and choices 
 T}
 (CHK)  | > c <n> <x>@T{
 :: checks if x is the answer to question n  
 T}
-return@T{
+@T{
 :: returns Correct or Incorrect 
 T}
 (HELP) | > h@T{
@@ -57,8 +57,18 @@ T}
 .TE
 
 .SH EXAMPLES
-none yet
-
+.TP
+.B qserver
+Starts the server normally connecting to storm.cise.ufl.edu:12000.
+.TP
+.B qserver\ \-d 
+Starts the server and prints out debugging information left in from development.
+.TP
+.B qserver \-h \fIhostname\f \ \fB-p\f \ \fIportnumber
+Starts the server trying to connect to \fIhostname\fR on port \fIportnumber\fR.
+.TP
+.B qserver\ \-n \fIdbname\f
+Starts the server normally but uses sqlite3 database \fIdbname\fR.
 .SH SEE ALSO
 qclient(1), qbank(5)
 .SH AUTHOR

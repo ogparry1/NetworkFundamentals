@@ -186,6 +186,50 @@ numbers of the manual followed by the types of pages they contain.
 .TS
 tab (@);
 l lx.
+(PUT)  | > p@T{
+:: add or put a new question into the database 
+T}
+return@T{
+:: returns question id 
+T}
+(DEL)  | > d <n>@T{
+:: delete question n 
+T}
+return@T{
+:: returns success/failure message 
+T}
+(GET)  | > g <n>@T{
+:: get question n 
+T}
+return@T{
+:: returns id, tags, question, and choices 
+T}
+(RAND) | >@T{
+:: same as get but n is randomly choosen 
+T}
+return@T{
+:: returns id, tags, question, and choices 
+T}
+(CHK)  | > c <n> <x>@T{
+:: checks if x is the answer to question n  
+T}
+return@T{
+:: returns Correct or Incorrect 
+T}
+(HELP) | > h@T{
+:: returns the help page 
+T}
+(KILL) | > k@T{
+:: client disconnects and server process is terminated 
+T}
+(QUIT) | > q@T{
+:: client disconnects and server listens for a new client connection
+T}
+.TE
+
+.TS
+tab (@);
+l lx.
 1@T{
 Executable programs or shell commands
 T}
