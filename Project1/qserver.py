@@ -24,14 +24,14 @@ if checkTables[0] == 0:
     conn.commit()
     debug('Tables Created')
 
-hostname = 'localhost'
+hostname = 'storm.cise.ufl.edu'
 serverPort = 12000
 serverSocket = socket(AF_INET,SOCK_STREAM)
 while True:
     debug("Trying port " + str(serverPort) + "...")
     try:
         serverSocket.bind((hostname,serverPort))
-        print("Server bound to localhost:" + str(serverPort))
+        print("Server bound to storm.cise.ufl.edu at port " + str(serverPort))
         break
     except:
         serverPort += 1
@@ -67,7 +67,7 @@ def sendResponse(socket, message):
     socket.send(message.encode())
 
 def getRequest(socket):
-    req = socket.recv(1024).decode() 
+    req = socket.recv(2048).decode() 
     result = re.split("\\\\",req)
     return result
 
@@ -175,8 +175,8 @@ def checkAnswer(num, ans):
     return result
 
 def helpPage():
-    hPage = 'Help Page'
-    return hPage
+    page = '\n\n--------------------------------------------------------------------------------------------------\n\nThis is a quiz program that allows you to insert new question, delete old ones, and test yourself on them.\nUsage is as follows:\n\n> p :: Use \'p\' to insert a new question.\n\t:: Input question tags as comma separated list (up to 5)\n\t:: Input question\n\t:: Input answer choices when prompted\n\t:: Input letter of correct answer choice\n\t>> Server will output the assigned question id\n\n> d <n> :: Use \'d\' to delete a question with id == n\n\t>> Server will output either success or failure message\n\n> g <n> :: Use \'g\' to see the question with id == n\n\t>> Server will output id, tags, question, and choices if question exists\n\n> r :: Use \'r\' to get a random question\n\t>> Server will output id, tags, question, and choices of a random question if any question exist\n\n> c <n> <x> :: Use \'c\' to check question n with your answer x (a, b, c, or d)\n\t>> Server outputs either Correct or Incorrect if question exists\n> k :: Use \'k\' to terminate the client and the server\n\n> q :: Use \'q\' to terminate just the client but leaving the server running\n\n> h :: Use \'h\' to display this page again\n\n--------------------------------------------------------------------------------------------------\n\n'
+    return page
 
 ## Start of the Program ##
 print('The server is ready to receive')
@@ -205,23 +205,47 @@ while True:
             connectionSocket.close()
             break
         elif req in ['p','put']:
-            response = addQuestion(request)
-            sendResponse(connectionSocket, str(response))
+            try:
+                response = addQuestion(request)
+                sendResponse(connectionSocket, str(response))
+            except Exception as e:
+                sendResponse(connectionSocket, 'Error: ' + str(e))
+                continue
         elif req in ['d','delete']:
-            response = deleteQuestion(request[1])
-            sendResponse(connectionSocket, response)
+            try:
+                response = deleteQuestion(request[1])
+                sendResponse(connectionSocket, response)
+            except Exception as e:
+                sendResponse(connectionSocket, 'Error: ' + str(e))
+                continue
         elif req in ['g','get']:
-            response = getQuestion(request[1])
-            sendResponse(connectionSocket, response)
+            try:
+                response = getQuestion(request[1])
+                sendResponse(connectionSocket, response)
+            except Exception as e:
+                sendResponse(connectionSocket, 'Error: ' + str(e))
+                continue
         elif req in ['c','check']:
-            response = checkAnswer(request[1], request[2])
-            sendResponse(connectionSocket, response)
+            try:
+                response = checkAnswer(request[1], request[2])
+                sendResponse(connectionSocket, response)
+            except Exception as e:
+                sendResponse(connectionSocket, 'Error: ' + str(e))
+                continue
         elif req in ['r','random']:
-            response = getRandomQuestion()
-            sendResponse(connectionSocket, response)
+            try:
+                response = getRandomQuestion()
+                sendResponse(connectionSocket, response)
+            except Exception as e:
+                sendResponse(connectionSocket, 'Error: ' + str(e))
+                continue
         elif req in ['h','help']:
-            response = helpPage()
-            sendResponse(connectionSocket, response)
+            try:
+                response = helpPage();
+                sendResponse(connectionSocket, response)
+            except Exception as e:
+                sendResponse(connectionSocket, 'Error: ' + str(e))
+                continue
         else:
             sendResponse(connectionSocket, 'Error: Invalid Request')
             continue

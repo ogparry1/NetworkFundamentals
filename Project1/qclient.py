@@ -16,7 +16,7 @@ def sendRequest(socket, message):
     socket.send(message.encode())
 
 def getResponse(socket):
-    response = socket.recv(1024).decode()
+    response = socket.recv(2048).decode()
     return response
 
 def buildRequest(arr):
