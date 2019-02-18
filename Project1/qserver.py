@@ -151,6 +151,7 @@ def helpPage():
 ## Start of the Program ##
 terminate = False
 d = True if '-d' in sys.argv else False
+dbname = 'project1.db' if '-n' not in sys.argv else sys.argv[sys.argv.index('-n')+1]
 conn = sql.connect('project1.db')
 db = conn.cursor()
 
@@ -165,8 +166,8 @@ if checkTables[0] == 0:
     conn.commit()
     debug('Tables Created')
 
-hostname = 'storm.cise.ufl.edu' if '-h' not in sys.argv else sys.argv[sys.argv.index('-h')]
-serverPort = 12000 if '-p' not in sys.argv else sys.argv[sys.argv.index('-p')]
+hostname = 'storm.cise.ufl.edu' if '-h' not in sys.argv else sys.argv[sys.argv.index('-h')+1]
+serverPort = 12000 if '-p' not in sys.argv else int(sys.argv[sys.argv.index('-p')+1])
 serverSocket = socket(AF_INET,SOCK_STREAM)
 while True:
     debug("Trying port " + str(serverPort) + "...")
