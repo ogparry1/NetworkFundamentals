@@ -53,6 +53,7 @@ def addQuestion(newQuestion):
     debug(tags)
     while len(tags) < 5:
         tags.append('')
+    tags = tags[0:5]
     debug(tags)
     question = request[2]
     answers = request[3:7]
@@ -149,7 +150,6 @@ def helpPage():
     return page
 
 ## Start of the Program ##
-terminate = False
 d = True if '-d' in sys.argv else False
 conn = sql.connect('qbank')
 db = conn.cursor()
@@ -172,7 +172,7 @@ while True:
     debug("Trying port " + str(serverPort) + "...")
     try:
         serverSocket.bind((hostname,serverPort))
-        print("Server bound to storm.cise.ufl.edu at port " + str(serverPort))
+        print("Server bound to " + hostname + " at port " + str(serverPort))
         break
     except:
         serverPort += 1
@@ -182,9 +182,6 @@ print('The server is ready to receive')
 print('Waiting on client...')
 
 while True:
-    if terminate:
-        break
-
     connectionSocket, addr = serverSocket.accept()
     print('Connected to Client')
 
@@ -198,11 +195,10 @@ while True:
         if req in ['k','kill']:
             sendResponse(connectionSocket,'EXIT')
             connectionSocket.close()
-            terminate = True
             conn.close()
             print('Client disconnected')
             print('Terminating server...')
-            break
+            sys.exit(0)
         elif req in ['q','quit']:
             sendResponse(connectionSocket,'EXIT')
             connectionSocket.close()

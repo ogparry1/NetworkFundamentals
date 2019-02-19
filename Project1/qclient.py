@@ -3,15 +3,6 @@ import numpy as np
 import sys
 import re
 
-d = True if '-d' in sys.argv else False
-
-# Connect to the server
-serverName = sys.argv[1]
-serverPort = int(sys.argv[2])
-clientSocket = socket(AF_INET, SOCK_STREAM)
-clientSocket.connect((serverName,serverPort))
-print ('Connected to Server')
-
 def sendRequest(socket, message):
     socket.send(message.encode())
 
@@ -25,7 +16,25 @@ def buildRequest(arr):
         requestStr = requestStr + e + "\\"
     return requestStr[:-1]
 
+
 ## Start of the client program ##
+# Connect to the server
+try:
+    serverName = sys.argv[1]
+    serverPort = int(sys.argv[2])
+except:
+    print("Error: qclient takes exactly 2 arguments\nEx:    qclient <hostname> <portnumber>")
+    sys.exit(-1)
+
+try:
+    clientSocket = socket(AF_INET, SOCK_STREAM)
+    clientSocket.connect((serverName,serverPort))
+    print ('Connected to Server')
+except Exception as e:
+    print ("Error: " + str(e))
+    sys.exit(-1)
+
+# Interface with server
 while True:
     request = re.split(' ', raw_input('> '))
     req = request[0]
