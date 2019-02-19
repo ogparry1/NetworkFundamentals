@@ -1,16 +1,23 @@
-NAME
-    The name of the command or function, followed by a one-line description of what it does.
-SYNOPSIS
-    In the case of a command, you get a formal description of how to run it and what command line options it takes.
-DESCRIPTION
-    A textual description of the functioning of the command or function.
-EXAMPLES
-    Some examples of common usage.
-SEE ALSO
-    A list of related commands or functions.
-BUGS
-    List known bugs.
-AUTHOR
-   Specify your contact information.
-COPYRIGHT
-    Specify your copyright information.
+.TH QBANK 5
+.SH NAME
+qbank - file holding the questions data for \fIqserver\fR and \fIqclient\fR
+.SH DESCRIPTION
+.B qbank
+is just a normal sqlite3 database file.  It's contents consist of three tables:
+.TS
+tab (@);
+l lx.
+1.@T{
+Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);
+T}
+2.@T{
+Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);
+T}
+3.@T{
+Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);
+T}
+.TE
+.SH SEE ALSO
+qserver(1), qclient(1)
+.SH AUTHOR
+John Parry, ogparry1@ufl.edu

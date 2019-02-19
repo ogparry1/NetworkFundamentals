@@ -4,11 +4,11 @@ qserver - Quiz server that handles question requests, answers, and storage
 .SH SYNOPSIS
 .B qserver
 [\fB\-d\fR]
-[\fB\-n\fR \fIhostname\fR]
-[\fB\-p\fR \fIport\fR]
+[\fB\-h\fR \fIhostname\fR]
+[\fB\-p\fR \fIportnumber\fR]
 .SH DESCRIPTION
 .B qserver
-is the quiz server used in conjunction with qclient to provide the user assess to a simple quiz program.  On start, the server will attach itself to an sqlite3 database named project1.db by default.  It checks to see if the database has been setup properly and procededs to either move onto connecting to a socket or inserting the correct tables into the database.  The program then connects to storm.cise.ufl.edu:12000 by default or on the first available port above the specified port.  It then listens on the socket for a connection request until it recieves one or is terminated. 
+is the quiz server used in conjunction with qclient to provide the user assess to a simple quiz program.  On start, the server will attach itself to an sqlite3 database named qbase.db by default.  It checks to see if the database has been setup properly and procededs to either move onto connecting to a socket or inserting the correct tables into the database.  The program then connects to storm.cise.ufl.edu:12000 by default or on the first available port above the specified port.  It then listens on the socket for a connection request until it recieves one or is terminated. 
 
 Once connected to a client, it will process requests. 
 
@@ -66,9 +66,6 @@ Starts the server and prints out debugging information left in from development.
 .TP
 .B qserver \-h \fIhostname\f \ \fB-p\f \ \fIportnumber
 Starts the server trying to connect to \fIhostname\fR on port \fIportnumber\fR.
-.TP
-.B qserver\ \-n \fIdbname\f
-Starts the server normally but uses sqlite3 database \fIdbname\fR.
 .SH SEE ALSO
 qclient(1), qbank(5)
 .SH AUTHOR

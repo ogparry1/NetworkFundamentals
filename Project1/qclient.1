@@ -1,17 +1,132 @@
-.\" Manpage for qclient.
-.\" Contact vivek@nixcraft.net.in to correct errors or typos.
-.TH man 1 "06 May 2010" "1.0" "qclient man page"
+.TH QCLIENT 1
 .SH NAME
-qclient \- create a new LDAP user 
+qclient - Provides an interface to connect to the quiz server and create, store, delete, get, and check questions and answers
 .SH SYNOPSIS
-qclient [USERNAME]
+.B qclient \fIhostname\fR \fIportnumber\fR
 .SH DESCRIPTION
-qclient is high level shell program for adding users to LDAP server.  On Debian, administrators should usually use qclient.debian(1) instead.
-.SH OPTIONS
-The qclient does not take any options. However, you can supply username.
+.B qclient
+is the program used to interface with the quiz system being run by \fBqserver\fR.  It neccessarily takes two command line arguments that specify the \fIhostname\fR and \fIportnumber\fR.  If the connection is not refused, either because the server is already connected to another client or the server isn't running, then the client will connect with the server until the user quits or terminates the server.  Once connected to the server, the user is presented with a prompt and can then begin making requests.
+.SH EXAMPLES
+.TS
+tab (@);
+l lx.
+PUT@T{
+| > p
+T}
+@T{
+| sports, baseball				
+T}
+@T{
+| Who was the 755 club created in honor of?
+T}
+@T{
+| .
+T}
+@T{
+| (a) Mickey Mantel
+T}
+@T{
+| .
+T}
+@T{
+| (b) Babe Ruth
+T}
+@T{
+| .
+T}
+@T{
+| (c) Hank Aaron
+T}
+@T{
+| .
+T}
+@T{
+| (d) Chipper Jones
+T}
+@T{
+| .
+T}
+@T{
+| .
+T}
+@T{
+| c
+T}
+@T{
+| 8
+T}
+DELETE@T{
+| > d 4
+T}
+@T{
+| Question 4 deleted.
+T}
+GET@T{
+| > g 4
+T}
+@T{
+| > Error: question 4 not found
+T}
+RANDOM@T{
+| > r
+T}
+@T{
+| 8
+T}
+@T{
+| sports, baseball				
+T}
+@T{
+| Who was the 755 club created in honor of?
+T}
+@T{
+| .
+T}
+@T{
+| (a) Mickey Mantel
+T}
+@T{
+| .
+T}
+@T{
+| (b) Babe Ruth
+T}
+@T{
+| .
+T}
+@T{
+| (c) Hank Aaron
+T}
+@T{
+| .
+T}
+@T{
+| (d) Chipper Jones
+T}
+@T{
+| .
+T}
+CHECK@T{
+| > c 8 d
+T}
+@T{
+| Incorrect
+T}
+HELP@T{
+| > h
+T}
+@T{
+| <help message>
+T}
+KILL@T{
+| > k
+T}
+QUIT@T{
+| > q
+T}
+.TE
+
 .SH SEE ALSO
-useradd(1), passwd(5), qclient.debian(1) 
-.SH BUGS
-No known bugs.
+qserver(1), qbank(5)
 .SH AUTHOR
-Vivek Gite (vivek@nixcraft.net.in)
+John Parry, ogparry1@ufl.edu

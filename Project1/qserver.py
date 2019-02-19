@@ -151,8 +151,7 @@ def helpPage():
 ## Start of the Program ##
 terminate = False
 d = True if '-d' in sys.argv else False
-dbname = 'project1.db' if '-n' not in sys.argv else sys.argv[sys.argv.index('-n')+1]
-conn = sql.connect('project1.db')
+conn = sql.connect('qbank')
 db = conn.cursor()
 
 db.execute("SELECT count(*) FROM sqlite_master;")
