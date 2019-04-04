@@ -1,5 +1,8 @@
 all: contestmeister contestant cserver
 
+clean:
+	rm contestmeister contestant cserver cbank
+
 contestmeister: contestmeister.py
 	python -m py_compile contestmeister.py
 	mv contestmeister.pyc contestmeister

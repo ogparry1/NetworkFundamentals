@@ -151,20 +151,30 @@ def helpPage():
 
 ## Start of the Program ##
 d = True if '-d' in sys.argv else False
-conn = sql.connect('cbank')
-db = conn.cursor()
+# conn = sql.connect('cbank')
+# db = conn.cursor()
 
-db.execute("SELECT count(*) FROM sqlite_master;")
-conn.commit()
-checkTables = db.fetchone() 
-if checkTables[0] == 0:
-    debug('Creating Tables')
-    db.execute("CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);")
-    db.execute("CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);")
-    db.execute("CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);")
-    conn.commit()
-    debug('Tables Created')
+# db.execute("SELECT count(*) FROM sqlite_master;")
+# conn.commit()
+# checkTables = db.fetchone() 
+# if checkTables[0] == 0:
+    # debug('Creating Tables')
+    # db.execute("CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);")
+    # db.execute("CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);")
+    # db.execute("CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);")
+    # conn.commit()
+    # debug('Tables Created')
 
+
+if not os.path.exists("cbank"):
+    with open("cbank","w+") as file:
+        file.write("{}")
+
+with open("cbank", "r") as file:
+    jsonDB = file.readlines()
+
+print(jsonDB)
+exit(0)
 hostname = 'storm.cise.ufl.edu' if '-h' not in sys.argv else sys.argv[sys.argv.index('-h')+1]
 serverPort = 12000 if '-p' not in sys.argv else int(sys.argv[sys.argv.index('-p')+1])
 serverSocket = socket(AF_INET,SOCK_STREAM)
