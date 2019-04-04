@@ -1,3 +1,0 @@
-#qclient
-#!/usr/bin/env
-python qclient.py $1 $2 
