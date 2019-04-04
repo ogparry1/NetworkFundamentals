@@ -1,0 +1,3 @@
+#"qserver"
+#!/usr/bin/env
+python qserver.py
