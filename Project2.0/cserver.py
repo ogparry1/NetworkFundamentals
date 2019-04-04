@@ -3,6 +3,7 @@ import sys, re, json, io
 import sqlite3 as sql
 import random as rand
 import numpy as np
+import os.path
 
 def debug(info):
     if d:
