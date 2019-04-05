@@ -49,16 +49,16 @@ def buildResponse(arr):
     return response
 
 def addQuestion(newQuestion):
-    num = dbGetLowestNumber()
-    tags = re.split(',|, ', request[1])
+    lnum = dbGetLowestNumber()
+    tags = re.split(',|, ', newQuestion[1])
     debug(tags)
     while len(tags) < 5:
         tags.append('')
     tags = tags[0:5]
     debug(tags)
-    question = request[2]
-    answers = request[3:7]
-    correct = request[7]
+    question = newQuestion[2]
+    answers = newQuestion[3:7]
+    correct = newQuestion[7]
 
     qinsert = [num]
     tinsert = [num]
@@ -150,7 +150,14 @@ def helpPage():
     page = '\n\n--------------------------------------------------------------------------------------------------\n\nThis is a quiz program that allows you to insert new question, delete old ones, and test yourself on them.\nUsage is as follows:\n\n> p :: Use \'p\' to insert a new question.\n\t:: Input question tags as comma separated list (up to 5)\n\t:: Input question\n\t:: Input answer choices when prompted\n\t:: Input letter of correct answer choice\n\t>> Server will output the assigned question id\n\n> d <n> :: Use \'d\' to delete a question with id == n\n\t>> Server will output either success or failure message\n\n> g <n> :: Use \'g\' to see the question with id == n\n\t>> Server will output id, tags, question, and choices if question exists\n\n> r :: Use \'r\' to get a random question\n\t>> Server will output id, tags, question, and choices of a random question if any question exist\n\n> c <n> <x> :: Use \'c\' to check question n with your answer x (a, b, c, or d)\n\t>> Server outputs either Correct or Incorrect if question exists\n> k :: Use \'k\' to terminate the client and the server\n\n> q :: Use \'q\' to terminate just the client but leaving the server running\n\n> h :: Use \'h\' to display this page again\n\n--------------------------------------------------------------------------------------------------\n\n'
     return page
 
-## Start of the Program ##
+def startContest():
+    def connectContestant():
+        return
+    return
+
+
+
+
 d = True if '-d' in sys.argv else False
 # conn = sql.connect('cbank')
 # db = conn.cursor()
@@ -160,22 +167,24 @@ d = True if '-d' in sys.argv else False
 # checkTables = db.fetchone() 
 # if checkTables[0] == 0:
     # debug('Creating Tables')
-    # db.execute("CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Question TEXT, Correct TEXT);")
-    # db.execute("CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);")
-    # db.execute("CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, A TEXT, B TEXT, C TEXT, D TEXT);")
+    # db.execute("CREATE TABLE Questions(Number INTEGER PRIMARY KEY ASC, Contest INTEGER, Question TEXT, Correct TEXT);")
+    # db.execute("CREATE TABLE Tags(Number INTEGER PRIMARY KEY ASC, Contest INTEGER, tag1 BLOB, tag2 BLOB, tag3 BLOB, tag4 BLOB, tag5 BLOB);")
+    # db.execute("CREATE TABLE Answers(Number INTEGER PRIMARY KEY ASC, Contest INTEGER, A TEXT, B TEXT, C TEXT, D TEXT);")
     # conn.commit()
     # debug('Tables Created')
 
 
-if not os.path.exists("cbank"):
-    with open("cbank","w+") as file:
-        file.write("{}")
+## Start of the Program ##
+# Create database if not exists
+db = json.dumps({"contests": {}})
+if os.path.exists("cbank"):
+    with open("cbank","r") as file:
+        db = json.dumps(file.readlines())
 
-with open("cbank", "r") as file:
-    jsonDB = file.readlines()
+print (db)
 
-print(jsonDB)
-exit(0)
+## Network Setup ##
+# Setup hostname and port number for meister
 hostname = 'storm.cise.ufl.edu' if '-h' not in sys.argv else sys.argv[sys.argv.index('-h')+1]
 serverPort = 12000 if '-p' not in sys.argv else int(sys.argv[sys.argv.index('-p')+1])
 serverSocket = socket(AF_INET,SOCK_STREAM)
@@ -191,11 +200,16 @@ while True:
 serverSocket.listen(1)
 print('The server is ready to receive')
 print('Waiting on client...')
+exit(0)
 
+
+## Accept Connections and Handle Requests ##
+# Wait for a meister, and then wait again once that connection drops
 while True:
     connectionSocket, addr = serverSocket.accept()
     print('Connected to Client')
 
+    # Handle Requests from Connected Meister
     while True:
         # Get a request
         request = getRequest(connectionSocket)

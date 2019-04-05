@@ -16,6 +16,17 @@ def buildRequest(arr):
         requestStr = requestStr + e + "\\"
     return requestStr[:-1]
 
+def inputName():
+    while True:
+        nickname = raw_input('Please input a nickname: ')
+        sendRequest(clientSocket, request)
+        response = getResponse(clientSocket)
+        if response == 'ACK':
+            return nickname
+
+
+print (inputName())
+exit(0)
 
 ## Start of the client program ##
 # Connect to the server
@@ -23,7 +34,7 @@ try:
     serverName = sys.argv[1]
     serverPort = int(sys.argv[2])
 except:
-    print("Error: qclient takes exactly 2 arguments\nEx:    qclient <hostname> <portnumber>")
+    print("Error: contestant takes exactly 2 arguments\nEx:    contestant <hostname> <portnumber>")
     sys.exit(-1)
 
 try:
@@ -35,6 +46,7 @@ except Exception as e:
     sys.exit(-1)
 
 # Interface with server
+name = inputName()
 while True:
     request = re.split(' ', raw_input('> '))
     req = request[0]
