@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 from socket import *
 import numpy as np
 import sys
@@ -22,11 +23,10 @@ def inputName():
         sendRequest(clientSocket, request)
         response = getResponse(clientSocket)
         if response == 'ACK':
+            print('Hello' + nickname + ', get ready for contest!')
             return nickname
-
-
-print (inputName())
-exit(0)
+        else:
+            print('Error: Nickname '+ nickname + ' is already in use.')
 
 ## Start of the client program ##
 # Connect to the server
@@ -47,30 +47,27 @@ except Exception as e:
 
 # Interface with server
 name = inputName()
-while True:
-    request = re.split(' ', raw_input('> '))
-    req = request[0]
+total = contest['total'] # is incremented in getContest
+count = 0
+ccount = 0
+for q in questions: # Questions is an array of dictionaries and an array or choices
+    count += 1
 
-    if req == 'p':
-        tags = raw_input('')
-        question = raw_input('')
-        print('.')
-        a = raw_input('(a) ')
-        print('.')
-        b = raw_input('(b) ')
-        print('.')
-        c = raw_input('(c) ')
-        print('.')
-        d = raw_input('(d) ')
-        print('.\n.')
-        correct = raw_input('')
-        request = [req,tags,question,a,b,c,d,correct]
+    # Ask the question
+    print('Question ' + count + ':')
+    print(q['question'])
+    for choice in q['choices']:
+        print(choice)
+    answer = raw_input('Enter your choice: ').lower()
 
-    request = buildRequest(request)
-    sendRequest(clientSocket, request)
-    response = getResponse(clientSocket)
-    if response == 'EXIT':
-        clientSocket.close()
-        break
-    else:
-        print(response)
+    # Check the answer
+    result = 'Incorrect. ' 
+    if answer == correct:
+        result = 'Correct. '
+        ccount += 1
+        q['answered-correct'] += 1
+
+    tratio = q['answered-correct']/q['total']*100
+    print(result + int(tratio) + '% of contestants answered this question correctly.')
+    print('Your score is ' + ccount + '/' + count + '. The top score is currently ' + contest['top-score'])
+
