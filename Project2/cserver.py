@@ -12,7 +12,7 @@ import time
 
 def debug(info):
     if '-d' in sys.argv:
-        print(info)
+        print(str(info))
 
 def loadJSON(filename):
     if os.path.exists(filename):
@@ -34,15 +34,15 @@ def dbGetLowestNumber():
     debug('Numbers')
     least = 1
     for i in range(0,len(nums)):
-        debug(str(nums[i]) + " " + str(i+1))
+        debug(nums[i] + " " + i+1)
         if nums[i] != i+1:
-            debug('returning ' + str(i+1))
+            debug('returning {}'.format(i+1))
             return i+1
-    debug('returning ' + str(len(nums)+1))
+    debug('returning {}'.format(len(nums)+1))
     return len(nums)+1
 
 def dbGetQuestionExists(n):
-    num = (str(n),)
+    num = (n,)
     db.execute("SELECT count(*) FROM Questions WHERE Number=?", num)
     conn.commit()
     result = db.fetchone()
@@ -55,13 +55,13 @@ def sendResponse(socket, message):
 def getRequest(socket):
     req = socket.recv(2048).decode() 
     result = req.split("\n")
-    print result[0]
+    debug(result[0])
     return result
 
 def buildResponse(arr):
     response = ''
     for e in arr:
-        response = response + e + '{}{}\n'
+        response += '{}\n'.format(e)
     return response
 
 def helpPage():
@@ -87,11 +87,11 @@ def setupContestSocket():
     return s, contestPort
 
 def killAllConnections():
-    for connection in allcons:
+    for c, addr in allcons:
         try:
-            sendResponse(connection, 'EXIT')
+            sendResponse(c, 'EXIT')
             connection.close()
-            print('Client disconnected')
+            print('Client {} disconnected'.format(addr[1]))
         except:
             pass
     print('Terminating server...')
@@ -165,7 +165,7 @@ def runContest(contestData, contest, questions):
         for choice in question['choices']:
             if choice == '.':
                 continue
-            response += '\n\t' + choice
+            response += '\n\t{}'.format(choice)
         for contestant in contestants:
             threads.append(thread.start_new_thread(sendQuestion, (contestant, response, totals)))
 
@@ -187,15 +187,14 @@ def runContest(contestData, contest, questions):
         total = totals.sum(axis=0)
         top = np.max(totals.sum(axis=1))
         ratio = int(total[-1]*100/len(contestants.keys()))
-        rstat = str(ratio) + '% of contestants answered this question correctly.\n'
         for contestant in contestants:
             conn = contestant['connection']
             correct = contestant['correct']
             if correct[-1] == 1:
-                response = 'Correct. ' + rstat
+                response += 'Correct. {}% of contestants answered this question correctly.\n'.format(ratio)
             else:
-                response = 'Incorrect. ' + rstat
-            response += 'Your score is ' + str(sum(correct)) + '/' + str(len(correct)) + '. The top score is currently ' + str(top) + '/' + str(len(correct))
+                response += 'Incorrect. {}% of contestants answered this question correctly.\n'.format(ratio)
+            response += 'Your score is {}/{}. The top score is currently {}/{}'.format(sum(correct),len(correct),top,len(correct))
             sendResponse(conn, response)
 
     for contestant in contestants:
@@ -205,7 +204,7 @@ def runContest(contestData, contest, questions):
     contestData['status'] = 'run'
 
 def hostMeister(connectionSocket, addr):
-    print('Connected to Meister: ' + str(addr))
+    debug('Connected to Meister {}'.format(addr[1]))
     contests = {}
     sessions = {}
     questions = {}
@@ -222,77 +221,79 @@ def hostMeister(connectionSocket, addr):
         request = getRequest(connectionSocket)
         debug(request)
         req = request[0].split()
-        print(str(request))
+        debug(str(request))
 
         # Take arguments and service the request
         if req[0] in ['p','put']:
             try:
-                num = req[1]
+                num = int(req[1])
                 response = ''
                 if int(num) in questions.keys():
-                    response = 'Error: question number ' + num + ' already used.'
+                    response = 'Error: question number {} already used.'.format(num)
                 else:
-                    response = 'Question ' + num + ' added.' 
+                    response = 'Question {} added.'.format(num)
                     question = {
-                        'tags': request[1],
-                        'question': request[2],
-                        'choices': [],
+                        'tags': request[1].strip(),
+                        'question': request[2].strip(),
+                        'choices': {},
                         'answer': ''
                     }
                     for i in range(3,100):
-                        question['choices'].append(request[i])
-                        if request[i] == '.' and request[i+1] == '.':
-                            question['answer'] = request[i+2]
-                            break
-                    questions[int(num)] = question
-                sendResponse(connectionSocket, str(response))
+                        if request[i] == '.':
+                            i += 1
+                            if request[i] == '.':
+                                question['answer'] = request[i+1].strip()
+                                break
+                        question['choices'][request[i][1]] = request[i][3:].strip()
+                    questions[num] = question
+                sendResponse(connectionSocket, response)
             except Exception as e:
-                sendResponse(connectionSocket, 'Error cserver put: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['g','get']:
             # Get a question
             try:
-                num = req[1]
+                num = int(req[1])
                 response = ''
-                if int(num) not in questions.keys():
-                    response = 'Error: question ' + num + ' not found.'
+                if num not in questions.keys():
+                    response = 'Error: question {} not found.'.format(num)
                 else:
-                    qdata = questions[int(num)]
-                    response = qdata['tags'] + '\n' + qdata['question'] + '\n'
-                    for choice in qdata['choices']:
-                        response += choice + '\n'
-                    response += '.\n' + qdata['answer']
+                    qdata = questions[num]
+                    response = '{}\n{}\n.\n'.format(qdata['tags'], qdata['question'])
+                    for key, val in qdata['choices'].items():
+                        response += '({}) {}\n.\n'.format(key,val)
+                    response += '.\n{}'.format(qdata['answer'])
                 sendResponse(connectionSocket, response)
             except Exception as e:
-                sendResponse(connectionSocket, 'Error cserver get: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['d','delete']:
             # Delete a question
             try:
-                num = req[1]
+                num = int(req[1])
                 questions.pop(int(num), None)
-                response = 'Deleted question ' + num
+                response = 'Deleted question {}'.format(num)
                 sendResponse(connectionSocket, response)
             except Exception as e:
-                sendResponse(connectionSocket, 'Error: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['s','set']:
             # Set a new contest
             try:
-                num = req[1]
+                num = int(req[1])
                 response = ''
                 if int(num) in contests.keys():
-                    response = 'Error: Contest ' + num + ' already exists.'
+                    response = 'Error: Contest {} already exists.'.format(num)
                 else:
-                    response = 'Contest ' + num + ' is set.'
-                    contests[int(num)] = {
+                    response = 'Contest {} is set.'.format(num)
+                    contests[num] = {
                         'questions': [], # question numbers for this contest
                         'contestants': [], # score data for every contestant over all contests
                         'status': 'not run'
                     }
                 sendResponse(connectionSocket, response)
             except Exception as e:
-                sendResponse(connectionSocket, 'Error: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['l','list']:
             # List contests by number
@@ -302,41 +303,40 @@ def hostMeister(connectionSocket, addr):
                     contestants = contest['contestants']
                     numcontestants = len(contestants)
                     status = contest['status']
-                    total = str(len(contest['questions']))
-                    if status != 'run':
-                        response = str(num) + '\t' + total + ' questions, ' + status
-                    else:
+                    total = len(contest['questions'])
+                    response = '{}\t{} questions, {}'.format(num, total, status)
+                    if status == 'run':
                         contestantcorrect = contestants.sum(axis=0)
-                        totalcorrect = contestants.sum(axis=1)
+                        # totalcorrect = contestants.sum(axis=1)
                         avgcorrect = np.average(contestantcorrect)
-                        response = str(num) + '\t' + total + ' questions, ' + status + ', average correct: ' + str(avgcorrect) + '; maximum correct: ' + total
+                        response += ', average correct: {}; maximum correct: {}'.format(avgcorrect,total)
                 sendResponse(connectionSocket, response)
             except Exception as e:
-                sendResponse(connectionSocket, 'Error: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['a','append']:
             # Append question to contest
             try:
                 response = ''
-                cnum = req[1]
-                qnum = req[2]
-                if int(cnum) not in contests.keys():
-                    response = 'Error: Contest ' + cnum + ' does not exist.'
-                elif int(qnum) not in questions.keys():
-                    response = 'Error: Question ' + qnum + ' does not exist.'
+                cnum = int(req[1])
+                qnum = int(req[2])
+                if cnum not in contests.keys():
+                    response = 'Error: Contest {} does not exist.'.format(cnum)
+                elif qnum not in questions.keys():
+                    response = 'Error: Question {} does not exist.'.format(qnum)
                 else:
-                    response = 'Added question ' + qnum + ' to contest ' + cnum + '.'
-                    contests[int(cnum)]['questions'].append(int(qnum))
+                    response = 'Added question {} to contest {}'.format(qnum,cnum)
+                    contests[cnum]['questions'].append(qnum)
                 sendResponse(connectionSocket, response)
             except Exception as e:
-                sendResponse(connectionSocket, 'Error: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['b','begin']:
             # Begin a contest
             try:
-                num = req[1]
+                num = int(req[1])
                 contestSocket, cPort = setupContestSocket() # Get the meister socket
-                contestData = contests[int(num)]
+                contestData = contests[num]
                 contest = sessions[cPort] = {
                     'contest-number': num,
                     'socket': contestSocket,
@@ -346,69 +346,57 @@ def hostMeister(connectionSocket, addr):
                     'contestants': {}, # each entry is nickname: { personal stats }
                 }
                 thread.start_new_thread(runContest, (contestData, contest, questions))
-                print('Contest ' + num + ' started on port ' + str(cPort))
+                print('Contest {} started on port {}'.format(num,cPort))
                 sendResponse(connectionSocket, str(cPort))
             except Exception as e:
-                sendResponse(connectionSocket, 'Error: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['r','review']:
             # Review a contest
             try:
-                num = req[1]
+                num = int(req[1])
                 response = ''
-                if int(num) not in contests.keys():
-                    response = 'Error: Contest ' + num + ' does not exist.'
+                if num not in contests.keys():
+                    response = 'Error: Contest {} does not exist.'.format(num)
                 else:
-                    contest = contests[int(num)]
+                    contest = contests[num]
                     contestants = contest['contestants']
                     questions = contest['questions']
                     numcontestants = len(contestants)
-                    total = str(len(questions))
+                    total = len(questions)
                     status = contest['status']
-                    if status != 'run':
-                        response = num + '\t' + total + ' questions, ' + status
-                    else:
+                    response = '{}\t{} questions, {}'.format(num,total,status)
+                    if status == 'run':
                         contestantcorrect = contestants.sum(axis=0)
                         totalcorrect = contestants.sum(axis=1)
                         avgcorrect = np.average(contestantcorrect)
-                        response = num + '\t' + total + ' questions, ' + status + ', average correct: ' + str(avgcorrect) + '; maximum correct: ' + total
+                        response += ', average correct: {}; maximum correct: {}'.format(avgcorrect,total)
                         for i in range(0,total-1):
-                            num = str(questions[i])
+                            num = questions[i]
                             percent = int(totalcorrect[i]*100/numcontestants)
-                            response += '\n\t' + num + '\t' + str(percent) + '% correct'
+                            response += '\n\t{}\t{}% correct'.format(num,percent)
                 sendResponse(connectionSocket, response)
             except Exception as e:
-                sendResponse(connectionSocket, 'Error: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['h','help']:
             try:
                 response = helpPage();
                 sendResponse(connectionSocket, response)
             except Exception as e:
-                sendResponse(connectionSocket, 'Error: ' + str(e))
+                sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['k','kill']:
             killAllConnections()
         elif req[0] in ['q','quit']:
             sendResponse(connectionSocket,'EXIT')
             connectionSocket.close()
-            print('Client disconnected')
-            print('Waiting on client...')
+            debug('Meister {} disconnected'.format(addr[1]))
             break
         else:
             sendResponse(connectionSocket, 'Error: Invalid Request')
             continue
   
-# def makeConnection():
-    # s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    # s.bind(('', port))
-    # print(port)
-    # s.listen(5)
-    # c, addr = s.accept()
-    # return c
-
-
 ## Start of the Program ##
 global db, allcons
 db = {}
@@ -416,26 +404,8 @@ allcons = []
 
 ## Network Setup ##
 # Setup hostname and port number for meister
-# hostname = 'storm.cise.ufl.edu' if '-h' not in sys.argv else sys.argv[sys.argv.index('-h')+1]
 meisterSocket = setupMeisterSocket() # Get the meister socket
 while True:
     c,addr = meisterSocket.accept()
-    allcons.append(c)
+    allcons.append((c,addr))
     thread.start_new_thread(hostMeister, (c,addr))
-
-# serverPort = 12000 if '-p' not in sys.argv else int(sys.argv[sys.argv.index('-p')+1])
-# serverSocket = socket(AF_INET,SOCK_STREAM)
-# while True:
-    # debug("Trying port " + str(serverPort) + "...")
-    # try:
-        # serverSocket.bind((hostname,serverPort))
-        # print("Server bound to " + hostname + " at port " + str(serverPort))
-        # break
-    # except:
-        # serverPort += 1
-        # continue
-# serverSocket.listen(1)
-# print('The server is ready to receive')
-# print('Waiting on client...')
-
-
