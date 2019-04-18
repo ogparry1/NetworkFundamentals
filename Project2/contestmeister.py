@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 from socket import *
 import numpy as np
 import thread
@@ -122,31 +123,31 @@ except Exception as e:
     print("Error: " + str(e))
     sys.exit(-1)
 
-try:
-    lines = []
-    with open(sys.argv[2]) as f:
-        lines = f.read().split('\n')
-        lines = lines[:-1]
-    for i in range(0,len(lines)-1):
-        line = lines[i]
-        if line[0] == 'p':
-            for j in range(i+1, len(lines)-1):
-                if lines[j] == '.' and lines[j+1] == '.':
-                    line += '\n' + lines[j+2]
-                    i = j+2
-                    break
-                elif lines[j] == '.':
-                    pass
-                else:
-                    line += '\n' + lines[j]
-        print('Line: ' + line)
-        sendRequest(clientSocket, line)
-        print('Requested')
-        time.sleep(.05)
-        socket.recv(2048).decode()
-        print('Received')
-except Exception as e:
-    print('Error: ' + str(e))
+# try:
+    # lines = []
+    # with open(sys.argv[2]) as f:
+        # lines = f.read().split('\n')
+        # lines = lines[:-1]
+    # for i in range(0,len(lines)-1):
+        # line = lines[i]
+        # if line[0] == 'p':
+            # for j in range(i+1, len(lines)-1):
+                # if lines[j] == '.' and lines[j+1] == '.':
+                    # line += '\n' + lines[j+2]
+                    # i = j+2
+                    # break
+                # elif lines[j] == '.':
+                    # pass
+                # else:
+                    # line += '\n' + lines[j]
+        # print('Line: ' + line)
+        # sendRequest(clientSocket, line)
+        # print('Requested')
+        # time.sleep(.05)
+        # socket.recv(2048).decode()
+        # print('Received')
+# except Exception as e:
+    # print('Error: ' + str(e))
 
 # Interface with server
 global response

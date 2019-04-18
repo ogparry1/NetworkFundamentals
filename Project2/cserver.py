@@ -61,7 +61,7 @@ def getRequest(socket):
 def buildResponse(arr):
     response = ''
     for e in arr:
-        response = response + e + '\n'
+        response = response + e + '{}{}\n'
     return response
 
 def helpPage():
@@ -71,7 +71,7 @@ def helpPage():
 def setupMeisterSocket():
     s = socket(AF_INET, SOCK_STREAM)
     s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    s.bind(('', 0))
+    s.bind((gethostname(), 0))
     global port
     port  = s.getsockname()[1]      
     print(port)
@@ -112,23 +112,20 @@ def waitForThreads(conns, contest, threads):
     return []
 
 def getContestant(conns, num, contest):
-    foundName = False
     conn = conns[num]
-    while not foundName:
+    while True:
         request = getRequest(conn)
         req = request[0]
-        response = ''
         if req in contest['contestants'].keys():
-            response = 'Error: Nickname ' + req + ' is already in use.'
+            sendResponse(conn, 'NACK')
         else:
-            response = 'Hello ' + req + ', get ready for contest!'
             contest['contestants'][req] = {
                 'connection': conn,
                 'correct': []
             }
             contest['connections'].append(conn)
-            foundName = True
-        sendResponse(conn, response)
+            sendResponse(conn, 'ACK')
+            break
 
 def sendQuestion(contestant, response, totals):
     conn = contestant['connection']
@@ -300,20 +297,19 @@ def hostMeister(connectionSocket, addr):
         elif req[0] in ['l','list']:
             # List contests by number
             try:
-                response = ''
-                for num in contests.keys():
-                    contest = contests[num]
+                response = 'No contests have been set.'
+                for (num, contest) in contests.items():
                     contestants = contest['contestants']
-                    numcontestants = len(contestants[0])
+                    numcontestants = len(contestants)
                     status = contest['status']
                     total = str(len(contest['questions']))
                     if status != 'run':
-                        response = num + '\t' + total + ' questions, ' + status
+                        response = str(num) + '\t' + total + ' questions, ' + status
                     else:
                         contestantcorrect = contestants.sum(axis=0)
                         totalcorrect = contestants.sum(axis=1)
                         avgcorrect = np.average(contestantcorrect)
-                        response = num + '\t' + total + ' questions, ' + status + ', average correct: ' + str(avgcorrect) + '; maximum correct: ' + total
+                        response = str(num) + '\t' + total + ' questions, ' + status + ', average correct: ' + str(avgcorrect) + '; maximum correct: ' + total
                 sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error: ' + str(e))
@@ -366,7 +362,7 @@ def hostMeister(connectionSocket, addr):
                     contest = contests[int(num)]
                     contestants = contest['contestants']
                     questions = contest['questions']
-                    numcontestants = len(contestants[0])
+                    numcontestants = len(contestants)
                     total = str(len(questions))
                     status = contest['status']
                     if status != 'run':
@@ -377,9 +373,9 @@ def hostMeister(connectionSocket, addr):
                         avgcorrect = np.average(contestantcorrect)
                         response = num + '\t' + total + ' questions, ' + status + ', average correct: ' + str(avgcorrect) + '; maximum correct: ' + total
                         for i in range(0,total-1):
-                            num = questions[i]
+                            num = str(questions[i])
                             percent = int(totalcorrect[i]*100/numcontestants)
-                            response += '\n\t' + str(num) + '\t' + str(percent) + '% correct'
+                            response += '\n\t' + num + '\t' + str(percent) + '% correct'
                 sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error: ' + str(e))
@@ -415,7 +411,7 @@ def hostMeister(connectionSocket, addr):
 
 ## Start of the Program ##
 global db, allcons
-db = loadJSON("cbank") if os.path.exists("cbank")  else {}
+db = {}
 allcons = []
 
 ## Network Setup ##
