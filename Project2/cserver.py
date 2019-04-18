@@ -1,14 +1,11 @@
 #!/usr/bin/env python2
 from socket import *
-import sys, re, json, io
+import sys, re, json, io, os, time
+import thread, threading
 import sqlite3 as sql
 import random as rand
 import numpy as np
 import ctypes as ct
-import os.path
-import os
-import thread
-import time
 
 def debug(info):
     if '-d' in sys.argv:
