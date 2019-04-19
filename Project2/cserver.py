@@ -162,7 +162,7 @@ def runContest(contestData, contest, questions):
     cthread = threading.Thread(target = acceptClients, args = (contest,))
     cthread.daemon = True
     cthread.start()
-    cthread.join(20.0)
+    cthread.join(60.0)
     contestants = contest['contestants']
     if len(contestants.keys()) == 0:
         print('No Contestants')
@@ -272,13 +272,11 @@ def hostMeister(connectionSocket, addr):
                 if num not in questions.keys():
                     response = 'Error: question {} not found.'.format(num)
                 else:
-                    print('key exists')
                     qdata = questions[num]
                     response = '{}\n{}\n.\n'.format(qdata['tags'], qdata['question'])
                     for key, val in qdata['choices'].items():
                         response += '({}) {}\n.\n'.format(key,val)
                     response += '.\n{}'.format(qdata['answer'])
-                    print(response)
                 sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
@@ -328,7 +326,7 @@ def hostMeister(connectionSocket, addr):
                         totalcorrect = np.sum(contestants,axis=1)
                         avgcorrect = np.average(totalcorrect)
                         response += ', average correct: {}; maximum correct: {}'.format(round(avgcorrect,2),numquestions)
-                sendResponse(connectionSocket, response)
+                    sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
