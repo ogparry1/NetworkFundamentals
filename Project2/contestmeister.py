@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 from socket import *
+import StringIO
 import numpy as np
 import thread
 import time
@@ -128,25 +129,28 @@ except Exception as e:
     # with open(sys.argv[2]) as f:
         # lines = f.read().split('\n')
         # lines = lines[:-1]
-    # for line in lines:
-        # print(line)
-
-        # sleep(.05)
-
-
-
-    # for i in range(len(lines)):
+    # for i in range(0,len(lines)-1):
         # line = lines[i]
+        # request = ''
         # if line[0] == 'p':
-            # for j in range(i+1, len(lines)-1):
+            # off = 2
+            # tag = lines[i+off-1]
+            # que = ''
+            # choices = []
+            # answer = ''
+            # while lines[i+off] != '.':
+                # que += lines[i+off]
+                # off += 1
+            # off += 1
+            # fos j in range(i+off, len(lines)-1):
                 # if lines[j] == '.' and lines[j+1] == '.':
-                    # line += '\n' + lines[j+2]
-                    # i = j+2
+                    # answer = lines[j+2]
+                    # i = j+3
                     # break
                 # elif lines[j] == '.':
                     # pass
                 # else:
-                    # line += '\n' + lines[j]
+                    # choices.append(lines[j])
         # print('Line: ' + line)
         # sendRequest(clientSocket, line)
         # print('Requested')
@@ -156,13 +160,29 @@ except Exception as e:
 # except Exception as e:
     # print('Error: ' + str(e))
 
-# def processInput(uin=True, 
+def readFileStdin(file):
+    try:
+        with (open(file)) as f:
+            for line in f:
+                time.sleep(.1)
+                oldstdin = sys.stdin
+                sys.stdin = StringIO.StringIO(line)
+                print(raw_input(''))
+
+    except:
+        sys.exit()
+
+readFileStdin('contest1.txt')
+os._exit(0)
 
 # Interface with server
 global response
 response = ''
 next = False
 thread.start_new_thread(waitForResponse, (clientSocket,))
+t = threading.Thread(readFileStdin, (filename,))
+t.daemon = True
+t.start()
 while True:
     request = raw_input('> ')
     req = request[0]
