@@ -133,8 +133,7 @@ def runContest(contestData, contest, questions):
     cthread = threading.Thread(target = acceptClients, args = (contest,))
     cthread.daemon = True
     cthread.start()
-    cthread.join(30.0)
-    # cthread.join(60.0)
+    cthread.join(60.0)
     contestants = contest['contestants']
     if len(contestants.keys()) == 0:
         print('No Contestants')

@@ -42,7 +42,7 @@ def makeChoice(socket, stats):
 ## Start of the client program ##
 # Connect to the server
 try:
-    serverName = sys.argv[1]
+    serverName = sys.argv[1] + '.cise.ufl.edu'
     serverPort = int(sys.argv[2])
 except:
     print("Error: Contestant takes exactly 2 arguments\nEx:    ./contestant <hostname> <portnumber>")

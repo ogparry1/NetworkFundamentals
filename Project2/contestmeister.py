@@ -110,8 +110,8 @@ def waitForResponse(clientSocket):
 ## Start of the client program ##
 # Connect to the server
 try:
-    serverName = sys.argv[1]
-    serverPort = int(sys.argv[2])
+    serverName = 'storm.cise.ufl.edu'
+    serverPort = int(sys.argv[1])
 except Exception as e:
     print("Error: " + str(e))
     print("Error: qclient takes exactly 2 arguments\nEx:    contestmeister <hostname> <portnumber>")
@@ -139,7 +139,7 @@ def initialize():
             debug(line)
             return line
 
-        initfile = sys.argv[3]
+        initfile = sys.argv[2]
         with (open(initfile)) as f:
             for line in f:
                 lineq.put(line.strip())
