@@ -325,8 +325,8 @@ def hostMeister(connectionSocket, addr):
                         contestantcorrect = np.sum(contestants,axis=0)
                         totalcorrect = np.sum(contestants,axis=1)
                         avgcorrect = np.average(totalcorrect)
-                        response += ', average correct: {}; maximum correct: {}'.format(round(avgcorrect,2),numquestions)
-                    sendResponse(connectionSocket, response)
+                        response += ', average correct: {}; maximum correct: {}\n'.format(round(avgcorrect,2),numquestions)
+                    sendResponse(connectionSocket, response.strip())
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
