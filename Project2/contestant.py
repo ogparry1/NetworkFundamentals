@@ -1,9 +1,8 @@
 #!/usr/bin/env python2
 from socket import *
 import numpy as np
-import time
-import sys
-import re
+import threading
+import time, sys, re, os
 
 def debug(message):
     if '-d' in sys.argv:
@@ -13,8 +12,8 @@ def sendRequest(socket, message):
     socket.send(message.encode())
 
 def getResponse(socket):
-    response = socket.recv(2048).decode()
-    return response
+    res = socket.recv(2048).decode()
+    return res
 
 def buildRequest(arr):
     requestStr = ""
@@ -27,16 +26,18 @@ def inputName(clientSocket):
     while True:
         nickname = raw_input('Please input a nickname: ')
         sendRequest(clientSocket, nickname)
-        response = getResponse(clientSocket)
-        if response == 'ACK':
-            print('Hello' + nickname + ', get ready for contest!')
+        res = getResponse(clientSocket)
+        print(res)
+        if res[0:5] == 'Hello':
             break
-        else:
-            print('Error: Nickname '+ nickname + ' is already in use.')
     return nickname
 
-def makeChoice(choice):
-    choice[0] = raw_input('Enter your choice: ')
+def makeChoice(socket, stats):
+    choice = raw_input('Enter your choice: ')
+    sendRequest(socket, choice)
+    stats = getResponse(socket)
+    print(stats)
+    return
 
 ## Start of the client program ##
 # Connect to the server
@@ -55,26 +56,28 @@ except Exception as e:
     print ("Error: {}".format(e))
     sys.exit(-1)
 
+def exitListen(socket):
+    while True:
+        # with listen_lock:
+        response = str(clientSocket.recv(2048).decode())
+        if response.find('EXIT') != -1 or response.find('FINISHED') != -1:
+            print('The contest is over - thanks for playing {}!'.format(name))
+            os._exit(0)
+        else:
+            time.sleep(1)
+
 name = inputName(clientSocket)
 qcount = 0
+stats = ''
 while True:
-    response = str(clientSocket.recv(2048).decode())
-    if response in ['EXIT', 'FINISHED']:
-        sys.exit(0)
-    else:
-        qcount += 1
-        question = response
-        print('\nQuestion {}:'.format(qcount))
-        print(question)
-        choice = ['NOAN']
-        t = thread.start_new_thread(makeChoice, (choice,))
-        end = time.time() + 60
-        while time.time() < end:
-            pass
-        t.exit(0)
-        sendRequest(clientSocket, choice[0])
-        stats = str(clientSocket.recv(2048).decode())
-        print(stats)
-
-
-
+    response = getResponse(clientSocket)
+    if response.find('EXIT') != -1 or response.find('FINISHED') != -1:
+        print('The contest is over - thanks for playing {}!'.format(name))
+        os._exit(0)
+    qcount += 1
+    print('Question {}:\n{}'.format(qcount, response))
+    t = threading.Thread(target = makeChoice, args = (clientSocket,stats))
+    t.daemon = True
+    t.start()
+    t.join(60.0)
+    print('\n'+stats)

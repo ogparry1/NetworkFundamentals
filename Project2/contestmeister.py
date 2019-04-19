@@ -108,8 +108,8 @@ def waitForResponse(clientSocket):
 ## Start of the client program ##
 # Connect to the server
 try:
-    serverName = gethostname()
-    serverPort = int(sys.argv[1])
+    serverName = sys.argv[1]
+    serverPort = int(sys.argv[2])
 except Exception as e:
     print("Error: " + str(e))
     print("Error: qclient takes exactly 2 arguments\nEx:    contestmeister <hostname> <portnumber>")
@@ -128,7 +128,14 @@ except Exception as e:
     # with open(sys.argv[2]) as f:
         # lines = f.read().split('\n')
         # lines = lines[:-1]
-    # for i in range(0,len(lines)-1):
+    # for line in lines:
+        # print(line)
+
+        # sleep(.05)
+
+
+
+    # for i in range(len(lines)):
         # line = lines[i]
         # if line[0] == 'p':
             # for j in range(i+1, len(lines)-1):
@@ -148,6 +155,8 @@ except Exception as e:
         # print('Received')
 # except Exception as e:
     # print('Error: ' + str(e))
+
+# def processInput(uin=True, 
 
 # Interface with server
 global response

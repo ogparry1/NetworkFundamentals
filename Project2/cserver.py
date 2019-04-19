@@ -1,49 +1,56 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+from Queue import Queue
 from socket import *
 import sys, re, json, io, os, time
-import thread, threading
+import threading
 import sqlite3 as sql
 import random as rand
 import numpy as np
 import ctypes as ct
+import operator
 
 def debug(info):
     if '-d' in sys.argv:
         print(str(info))
 
-def loadJSON(filename):
-    if os.path.exists(filename):
-        with open(filename) as file:
-            return json.load(file)
+def printDictionary(dict):
+    print(json.dumps(dict, indent=4))
 
-def saveJSON(filename, data):
-    if os.path.exists(filename):
-        with open(filename) as file:
-            file.write(json.dumps(data))
+def sortDictionary(dict):
+    d_sorted = sorted(dict.items(), key=operator.itemgetter(0))
+    return d_sorted
 
-def dbGetLowestNumber():
-    db.execute('SELECT Number FROM Questions;')
-    conn.commit()
-    nums = db.fetchone()
-    if nums == None:
-        return 1
-    debug(nums)
-    debug('Numbers')
-    least = 1
-    for i in range(0,len(nums)):
-        debug(nums[i] + " " + i+1)
-        if nums[i] != i+1:
-            debug('returning {}'.format(i+1))
-            return i+1
-    debug('returning {}'.format(len(nums)+1))
-    return len(nums)+1
+def loadJSON(dict):
+    return json.loads(dict)
 
-def dbGetQuestionExists(n):
-    num = (n,)
-    db.execute("SELECT count(*) FROM Questions WHERE Number=?", num)
-    conn.commit()
-    result = db.fetchone()
-    return result[0]
+# def saveJSON(filename, data):
+    # if os.path.exists(filename):
+        # with open(filename) as file:
+            # file.write(json.dumps(data))
+
+# def dbGetLowestNumber():
+    # db.execute('SELECT Number FROM Questions;')
+    # conn.commit()
+    # nums = db.fetchone()
+    # if nums == None:
+        # return 1
+    # debug(nums)
+    # debug('Numbers')
+    # least = 1
+    # for i in range(0,len(nums)):
+        # debug(nums[i] + " " + i+1)
+        # if nums[i] != i+1:
+            # debug('returning {}'.format(i+1))
+            # return i+1
+    # debug('returning {}'.format(len(nums)+1))
+    # return len(nums)+1
+
+# def dbGetQuestionExists(n):
+    # num = (n,)
+    # db.execute("SELECT count(*) FROM Questions WHERE Number=?", num)
+    # conn.commit()
+    # result = db.fetchone()
+    # return result[0]
 
 ## Server Functions ##
 def sendResponse(socket, message):
@@ -65,15 +72,145 @@ def helpPage():
     page = '\n\n--------------------------------------------------------------------------------------------------\n\nThis is a quiz program that allows you to insert new question, delete old ones, and test yourself on them.\nUsage is as follows:\n\n> p :: Use \'p\' to insert a new question.\n\t:: Input question tags as comma separated list (up to 5)\n\t:: Input question\n\t:: Input answer choices when prompted\n\t:: Input letter of correct answer choice\n\t>> Server will output the assigned question id\n\n> d <n> :: Use \'d\' to delete a question with id == n\n\t>> Server will output either success or failure message\n\n> g <n> :: Use \'g\' to see the question with id == n\n\t>> Server will output id, tags, question, and choices if question exists\n\n> r :: Use \'r\' to get a random question\n\t>> Server will output id, tags, question, and choices of a random question if any question exist\n\n> c <n> <x> :: Use \'c\' to check question n with your answer x (a, b, c, or d)\n\t>> Server outputs either Correct or Incorrect if question exists\n> k :: Use \'k\' to terminate the client and the server\n\n> q :: Use \'q\' to terminate just the client but leaving the server running\n\n> h :: Use \'h\' to display this page again\n\n--------------------------------------------------------------------------------------------------\n\n'
     return page
 
-def setupMeisterSocket():
-    s = socket(AF_INET, SOCK_STREAM)
-    s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    s.bind((gethostname(), 0))
-    global port
-    port  = s.getsockname()[1]      
-    print(port)
-    s.listen(5)
-    return s
+def killAllConnections():
+    for tup in allcons:
+        try:
+            sendResponse(tup[0], 'EXIT')
+            connection.close()
+            # print('Client {} disconnected'.format(tup[1][1]))
+        except:
+            pass
+    print('Terminating server...')
+    os._exit(0)
+
+# def waitForThreads(conns, contest, threads):
+    # dead = 0
+    # end = time.time() + 60
+    # while time.time() < end and dead != len(threads):
+        # dead = 0
+        # for t in threads:
+            # if not t.isAlive():
+                # dead += 1
+    # for conn in conns:
+        # if conn not in contest['connections']:
+            # sendResponse(conn, 'EXIT')
+            # conn.close()
+    # return []
+
+def sendQuestion(contestant, response, question):
+    contestant['correct'].append(0)
+    conn = contestant['connection']
+    sendResponse(conn, response)
+    answer = getRequest(conn)
+    answer = answer[0].lower()
+    if answer == question['answer']:
+        contestant['correct'][-1] = 1
+    return
+
+def getContestant(conn, addr, contest):
+    # print('Getting Contestant')
+    while True:
+        request = getRequest(conn)
+        req = request[0]
+        if req in contest['contestants'].keys():
+            sendResponse(conn, 'Error: Nickname {} is already in use.'.format(req))
+        else:
+            allcons.append(conn)
+            contest['contestants'][req] = {
+                'connection': conn,
+                'correct': []
+            }
+            contest['connections'].append(conn)
+            sendResponse(conn, 'Hello {}, get ready for contest!'.format(req))
+            return
+
+def acceptClients(contest):
+    socket = contest['socket']
+    while True:
+        c,addr = socket.accept()
+        allcons.append((c,addr))
+        t = threading.Thread(target = getContestant, args = (c, addr, contest))
+        t.daemon = True
+        t.start()
+
+
+def runContest(contestData, contest, questions):
+
+    def qthreader(qq):
+        contestant, response, question = qq.get()
+        sendQuestion(contestant,response, question)
+        qq.task_done()
+
+    def sendStats(top, ratio, data):
+        conn = data['connection']
+        correct = data['correct']
+        response = ''
+        if correct[-1] == 1:
+            response += 'Correct. {}% of contestants answered this question correctly.\n'.format(ratio)
+        else:
+            response += 'Incorrect. {}% of contestants answered this question correctly.\n'.format(ratio)
+        response += 'Your score is {}/{}. The top score is currently {}/{}'.format(sum(correct),len(correct),top,len(correct))
+        sendResponse(conn, response)
+
+    def sthreader():
+        top, ratio, data = qq.get()
+        sendStats(top,ratio, data)
+        qq.task_done()
+
+    conns = []
+
+    # Get Contestants
+    # print('Taking participants')
+    cthread = threading.Thread(target = acceptClients, args = (contest,))
+    cthread.daemon = True
+    cthread.start()
+    cthread.join(20.0)
+    contestants = contest['contestants']
+    if len(contestants.keys()) == 0:
+        print('No Contestants')
+        return
+
+    # Serve the questions
+    # print('Serving Questions')
+    qq = Queue()
+    threads = []
+    for num in contest['questions']:
+        # names = contestants.keys()
+        question = questions[num]
+        response = question['question']
+        choices = question['choices']
+        for key in sorted(choices.keys()):
+            response += '\n\t({}) {}'.format(key, choices[key])
+        for name, data in contestants.items():
+            qq.put((data, response, question))
+            t = threading.Thread(target = qthreader, args = (qq,))
+            t.daemon = True
+            t.start()
+            threads.append(t) 
+        for t in threads:
+            t.join(60.0)
+
+        # Send stats
+        totals = []
+        for data in contestants.values():
+            totals.append(data['correct'])
+        num_correct = np.sum(totals,axis=0)
+        each_correct = np.sum(totals,axis=1)
+        top = np.max(each_correct)
+        ratio = int(num_correct[-1]*100/len(contestants.keys()))
+
+        for data in contestants.values():
+            qq.put((top, ratio, data))
+            t = threading.Thread(target = sthreader)
+            t.daemon = True
+            t.start()
+
+    time.sleep(0.1)
+    for name, data in contestants.items():
+        sendResponse(data['connection'], 'FINISHED')
+        data['connection'].close()
+    contestData['contestants'] = totals if contestData['status'] != 'run' else np.concatenate((contestData['contestants'],totals),0)
+    contestData['status'] = 'run'
 
 def setupContestSocket():
     s = socket(AF_INET, SOCK_STREAM)
@@ -83,125 +220,9 @@ def setupContestSocket():
     s.listen(5)
     return s, contestPort
 
-def killAllConnections():
-    for c, addr in allcons:
-        try:
-            sendResponse(c, 'EXIT')
-            connection.close()
-            print('Client {} disconnected'.format(addr[1]))
-        except:
-            pass
-    print('Terminating server...')
-    os._exit(0)
-
-def waitForThreads(conns, contest, threads):
-    dead = 0
-    end = time.time() + 60
-    while time.time() < end and dead != len(threads):
-        dead = 0
-        for t in threads:
-            if not t.isAlive():
-                dead += 1
-    for conn in conns:
-        if conn not in contest['connections']:
-            sendResponse(conn, 'EXIT')
-            conn.close()
-    return []
-
-def getContestant(conns, num, contest):
-    conn = conns[num]
-    while True:
-        request = getRequest(conn)
-        req = request[0]
-        if req in contest['contestants'].keys():
-            sendResponse(conn, 'NACK')
-        else:
-            contest['contestants'][req] = {
-                'connection': conn,
-                'correct': []
-            }
-            contest['connections'].append(conn)
-            sendResponse(conn, 'ACK')
-            break
-
-def sendQuestion(contestant, response, totals):
-    conn = contestant['connection']
-    sendResponse(conn, response)
-    answer = getRequest(conn)
-    answer = answer[0].lower()
-    if answer == question['answer']:
-        contestant['correct'].append(1)
-    else:
-        contestant['correct'].append(0)
-
-def runContest(contestData, contest, questions):
-    conns = []
-    threads = []
-
-    # Get Contestants
-    end = time.time() + 60
-    while time.time() < end:
-        c,addr = contest['socket'].accept()
-        conns.append(c)
-        threads.append(thread.start_new_thread(getContestant, (conns, len(conns)-1, contest)))
-    for conn in conns:
-        if conn not in contest['connections']:
-            sendResponse(conn, 'EXIT')
-            conn.close()
-    for thread in threads:
-        if not thread.isAlive():
-            thread.exit()
-
-    # Serve the questions
-    totals = []
-    contestants = contest['contestants']
-    for num in contest['questions']:
-        threads = []
-        names = contestants.keys()
-        response = question['question']
-        for choice in question['choices']:
-            if choice == '.':
-                continue
-            response += '\n\t{}'.format(choice)
-        for contestant in contestants:
-            threads.append(thread.start_new_thread(sendQuestion, (contestant, response, totals)))
-
-        dead = [0] * len(threads)
-        end = time.time() + 60
-        while time.time() < end:
-            if np.average(dead) == 1:
-                break
-            for t in threads:
-                if t.isAlive():
-                    dead[t.index()] = 1
-        for d in dead:
-            if d == 0:
-                t[d.index()].exit()
-                name = names(d.index())
-                contestants['name'][correct].append(0)
-        for contestant in contestants:
-            totals.append(contestant['correct'])
-        total = totals.sum(axis=0)
-        top = np.max(totals.sum(axis=1))
-        ratio = int(total[-1]*100/len(contestants.keys()))
-        for contestant in contestants:
-            conn = contestant['connection']
-            correct = contestant['correct']
-            if correct[-1] == 1:
-                response += 'Correct. {}% of contestants answered this question correctly.\n'.format(ratio)
-            else:
-                response += 'Incorrect. {}% of contestants answered this question correctly.\n'.format(ratio)
-            response += 'Your score is {}/{}. The top score is currently {}/{}'.format(sum(correct),len(correct),top,len(correct))
-            sendResponse(conn, response)
-
-    for contestant in contestants:
-        sendResponse(contestant['connection'], 'FINISHED')
-        contestant['connection'].close()
-    contestData['contestants'] = np.concatenate((contestData['contestants'],np.transpose(totals)),1)
-    contestData['status'] = 'run'
-
 def hostMeister(connectionSocket, addr):
     debug('Connected to Meister {}'.format(addr[1]))
+    contest_threads = []
     contests = {}
     sessions = {}
     questions = {}
@@ -268,7 +289,7 @@ def hostMeister(connectionSocket, addr):
             # Delete a question
             try:
                 num = int(req[1])
-                questions.pop(int(num), None)
+                questions.pop(num, None)
                 response = 'Deleted question {}'.format(num)
                 sendResponse(connectionSocket, response)
             except Exception as e:
@@ -279,7 +300,7 @@ def hostMeister(connectionSocket, addr):
             try:
                 num = int(req[1])
                 response = ''
-                if int(num) in contests.keys():
+                if num in contests.keys():
                     response = 'Error: Contest {} already exists.'.format(num)
                 else:
                     response = 'Contest {} is set.'.format(num)
@@ -306,7 +327,7 @@ def hostMeister(connectionSocket, addr):
                         contestantcorrect = contestants.sum(axis=0)
                         # totalcorrect = contestants.sum(axis=1)
                         avgcorrect = np.average(contestantcorrect)
-                        response += ', average correct: {}; maximum correct: {}'.format(avgcorrect,total)
+                        response += ', average correct: {}; maximum correct: {}'.format(round(avgcorrect,2),total)
                 sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
@@ -337,12 +358,14 @@ def hostMeister(connectionSocket, addr):
                 contest = sessions[cPort] = {
                     'contest-number': num,
                     'socket': contestSocket,
-                    'questions': contests[int(num)]['questions'],
+                    'questions': contests[num]['questions'],
                     'connections': [],
                     'registered': [],
                     'contestants': {}, # each entry is nickname: { personal stats }
                 }
-                thread.start_new_thread(runContest, (contestData, contest, questions))
+                t = threading.Thread(target = runContest, args = (contestData, contest, questions))
+                t.daemon = True
+                t.start()
                 print('Contest {} started on port {}'.format(num,cPort))
                 sendResponse(connectionSocket, str(cPort))
             except Exception as e:
@@ -356,21 +379,22 @@ def hostMeister(connectionSocket, addr):
                 if num not in contests.keys():
                     response = 'Error: Contest {} does not exist.'.format(num)
                 else:
+                    # printDictionary(str(contest))
                     contest = contests[num]
                     contestants = contest['contestants']
-                    questions = contest['questions']
+                    qnums = contest['questions']
                     numcontestants = len(contestants)
-                    total = len(questions)
+                    numquestions = len(qnums)
                     status = contest['status']
-                    response = '{}\t{} questions, {}'.format(num,total,status)
+                    response = '{}\t{} questions, {}'.format(num,numquestions,status)
                     if status == 'run':
-                        contestantcorrect = contestants.sum(axis=0)
-                        totalcorrect = contestants.sum(axis=1)
-                        avgcorrect = np.average(contestantcorrect)
-                        response += ', average correct: {}; maximum correct: {}'.format(avgcorrect,total)
-                        for i in range(0,total-1):
-                            num = questions[i]
-                            percent = int(totalcorrect[i]*100/numcontestants)
+                        contestantcorrect = np.sum(contestants,axis=0)
+                        totalcorrect = np.sum(contestants,axis=1)
+                        avgcorrect = np.average(totalcorrect)
+                        response += ', average correct: {}; maximum correct: {}'.format(avgcorrect,numquestions)
+                        for i in range(0,numquestions):
+                            num = qnums[i]
+                            percent = int(contestantcorrect[i]*100/numcontestants)
                             response += '\n\t{}\t{}% correct'.format(num,percent)
                 sendResponse(connectionSocket, response)
             except Exception as e:
@@ -394,10 +418,26 @@ def hostMeister(connectionSocket, addr):
             sendResponse(connectionSocket, 'Error: Invalid Request')
             continue
   
+def setupMeisterSocket():
+    s = socket(AF_INET, SOCK_STREAM)
+    s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+    s.bind((gethostname(), 0))
+    global port
+    port = s.getsockname()[1]      
+    print(port)
+    s.listen(5)
+    return s
+
+def mthreader():
+    c, addr = mq.get()
+    hostMeister(c,addr)
+    mq.task_done()
+
 ## Start of the Program ##
-global db, allcons
+global mq, db, allcons
 db = {}
 allcons = []
+mq = Queue()
 
 ## Network Setup ##
 # Setup hostname and port number for meister
@@ -405,4 +445,7 @@ meisterSocket = setupMeisterSocket() # Get the meister socket
 while True:
     c,addr = meisterSocket.accept()
     allcons.append((c,addr))
-    thread.start_new_thread(hostMeister, (c,addr))
+    mq.put((c,addr))
+    t = threading.Thread(target = mthreader)
+    t.daemon = True
+    t.start()
