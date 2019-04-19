@@ -104,7 +104,7 @@ def waitForResponse(clientSocket):
             clientSocket.close()
             os._exit(0)
         else:
-            print(response)
+            print(response.strip())
 
 
 ## Start of the client program ##

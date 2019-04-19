@@ -23,35 +23,6 @@ def sortDictionary(dict):
 def loadJSON(dict):
     return json.loads(dict)
 
-# def saveJSON(filename, data):
-    # if os.path.exists(filename):
-        # with open(filename) as file:
-            # file.write(json.dumps(data))
-
-# def dbGetLowestNumber():
-    # db.execute('SELECT Number FROM Questions;')
-    # conn.commit()
-    # nums = db.fetchone()
-    # if nums == None:
-        # return 1
-    # debug(nums)
-    # debug('Numbers')
-    # least = 1
-    # for i in range(0,len(nums)):
-        # debug(nums[i] + " " + i+1)
-        # if nums[i] != i+1:
-            # debug('returning {}'.format(i+1))
-            # return i+1
-    # debug('returning {}'.format(len(nums)+1))
-    # return len(nums)+1
-
-# def dbGetQuestionExists(n):
-    # num = (n,)
-    # db.execute("SELECT count(*) FROM Questions WHERE Number=?", num)
-    # conn.commit()
-    # result = db.fetchone()
-    # return result[0]
-
 ## Server Functions ##
 def sendResponse(socket, message):
     socket.send(message.encode())
@@ -162,7 +133,8 @@ def runContest(contestData, contest, questions):
     cthread = threading.Thread(target = acceptClients, args = (contest,))
     cthread.daemon = True
     cthread.start()
-    cthread.join(60.0)
+    cthread.join(30.0)
+    # cthread.join(60.0)
     contestants = contest['contestants']
     if len(contestants.keys()) == 0:
         print('No Contestants')
@@ -207,6 +179,7 @@ def runContest(contestData, contest, questions):
         sendResponse(data['connection'], 'FINISHED')
         data['connection'].close()
     contestData['contestants'] = totals if contestData['status'] != 'run' else np.concatenate((contestData['contestants'],totals),0)
+    contestData['recents'] = totals
     contestData['status'] = 'run'
 
 def setupContestSocket():
@@ -325,8 +298,9 @@ def hostMeister(connectionSocket, addr):
                         contestantcorrect = np.sum(contestants,axis=0)
                         totalcorrect = np.sum(contestants,axis=1)
                         avgcorrect = np.average(totalcorrect)
-                        response += ', average correct: {}; maximum correct: {}\n'.format(round(avgcorrect,2),numquestions)
-                    sendResponse(connectionSocket, response.strip())
+                        response += ', average correct: {}; maximum correct: {}'.format(round(avgcorrect,2),numquestions)
+                    response += '\n'
+                    sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
@@ -379,19 +353,22 @@ def hostMeister(connectionSocket, addr):
                 else:
                     contest = contests[num]
                     contestants = contest['contestants']
+                    recents = contest['recents']
                     qnums = sorted(contest['questions'])
                     numcontestants = len(contestants)
+                    numrecents = len(recents)
                     numquestions = len(qnums)
                     status = contest['status']
                     response = '{}\t{} questions, {}'.format(num,numquestions,status)
                     if status == 'run':
                         contestantcorrect = np.sum(contestants,axis=0)
+                        recentscorrect = np.sum(recents,axis=0)
                         totalcorrect = np.sum(contestants,axis=1)
                         avgcorrect = np.average(totalcorrect)
                         response += ', average correct: {}; maximum correct: {}'.format(round(avgcorrect,2),numquestions)
                         for i in range(0,numquestions):
                             num = qnums[i]
-                            percent = int(contestantcorrect[i]*100/numcontestants)
+                            percent = int(recentscorrect[i]*100/numrecents)
                             response += '\n\t{}\t{}% correct'.format(num,percent)
                 sendResponse(connectionSocket, response)
             except Exception as e:
