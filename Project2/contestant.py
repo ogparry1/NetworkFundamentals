@@ -42,10 +42,10 @@ def makeChoice(socket, stats):
 ## Start of the client program ##
 # Connect to the server
 try:
-    serverName = gethostname()
-    serverPort = int(sys.argv[1])
+    serverName = sys.argv[1]
+    serverPort = int(sys.argv[2])
 except:
-    print("Error: Contestant takes exactly 1 arguments\nEx:    ./contestant <portnumber>")
+    print("Error: Contestant takes exactly 2 arguments\nEx:    ./contestant <hostname> <portnumber>")
     sys.exit(-1)
 
 try:
