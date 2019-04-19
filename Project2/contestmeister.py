@@ -1,8 +1,9 @@
 #!/usr/bin/env python2
 from socket import *
+from Queue import Queue
 import StringIO
 import numpy as np
-import thread
+import thread, threading
 import time
 import sys, os
 import re
@@ -36,10 +37,10 @@ def printRequest(reqarr):
             requestStr = requestStr + e + "\n"
     print(requestStr[:-1])
 
-def getValidChoices():
+def getValidChoices(input):
     choices = {}
     while True:
-        choice = raw_input('')
+        choice = input('')
         if choice == '.':
             if len(choices) == 0:
                 print('Please supply at least 1 choice.')
@@ -55,7 +56,7 @@ def getValidChoices():
                 if doprint:
                     print("Error: Input not long enough.")
                     doprint = False
-                choice += raw_input(choice)
+                choice += input(choice)
 
             # Check input syntax
             if choice[0] != '(' or not choice[1].isalpha() or choice[2] != ')' or choice[3] != ' ':
@@ -69,16 +70,16 @@ def getValidChoices():
 
             # Check if key exists or want to replace
             if key in choices:
-                replace = raw_input('[Y/n] Replace ' + key + '? ').lower()
+                replace = input('[Y/n] Replace ' + key + '? ').lower()
                 if replace == 'n':
                     print('.')
                     continue
 
             # Build any more of the answer and place in dictionary
-            end = raw_input('')
+            end = input('')
             while end != '.':
                 answer += ' ' + end
-                end = raw_input('')
+                end = input('')
             choices[key] = answer
 
     # Convert choices to a string
@@ -86,7 +87,7 @@ def getValidChoices():
     for key in choices:
         result += key + choices[key] + '\n.\n'
     while True:
-        answer = raw_input('').lower()
+        answer = input('').lower()
         key = '(' + answer + ')'
         if key in choices:
             result += '.\n' + answer
@@ -124,65 +125,56 @@ except Exception as e:
     print("Error: " + str(e))
     sys.exit(-1)
 
-# try:
-    # lines = []
-    # with open(sys.argv[2]) as f:
-        # lines = f.read().split('\n')
-        # lines = lines[:-1]
-    # for i in range(0,len(lines)-1):
-        # line = lines[i]
-        # request = ''
-        # if line[0] == 'p':
-            # off = 2
-            # tag = lines[i+off-1]
-            # que = ''
-            # choices = []
-            # answer = ''
-            # while lines[i+off] != '.':
-                # que += lines[i+off]
-                # off += 1
-            # off += 1
-            # fos j in range(i+off, len(lines)-1):
-                # if lines[j] == '.' and lines[j+1] == '.':
-                    # answer = lines[j+2]
-                    # i = j+3
-                    # break
-                # elif lines[j] == '.':
-                    # pass
-                # else:
-                    # choices.append(lines[j])
-        # print('Line: ' + line)
-        # sendRequest(clientSocket, line)
-        # print('Requested')
-        # time.sleep(.05)
-        # socket.recv(2048).decode()
-        # print('Received')
-# except Exception as e:
-    # print('Error: ' + str(e))
-
-def readFileStdin(file):
-    try:
-        with (open(file)) as f:
-            for line in f:
-                time.sleep(.1)
-                oldstdin = sys.stdin
-                sys.stdin = StringIO.StringIO(line)
-                print(raw_input(''))
-
-    except:
-        sys.exit()
-
-readFileStdin('contest1.txt')
-os._exit(0)
-
 # Interface with server
-global response
+global response, lineq
+lineq = Queue()
 response = ''
 next = False
-thread.start_new_thread(waitForResponse, (clientSocket,))
-t = threading.Thread(readFileStdin, (filename,))
+# thread.start_new_thread(waitForResponse, (clientSocket,))
+def initialize():
+    try:
+        def lineqget(na=''):
+            line = lineq.get()
+            lineq.task_done()
+            debug(line)
+            return line
+
+        initfile = sys.argv[3]
+        with (open(initfile)) as f:
+            for line in f:
+                lineq.put(line.strip())
+
+            while not lineq.empty():
+                request = lineqget()
+                req = request[0]
+
+                if req == 'p':
+                    request += '\n' + lineqget() # add tags
+                    request += '\n' + lineqget() # add question
+                    end = lineqget() # check if period given
+                    while end != '.':
+                        request += '\n' + end # add more to the question
+                        end = lineqget() # check period again
+                    choices = getValidChoices(lineqget)
+                    request += choices # add valid choices and answer
+
+                # request = buildRequest(request)
+                sendRequest(clientSocket, request)
+                time.sleep(.1)
+            line1.join()
+
+    except:
+        sys.exit(0)
+
+
+t = threading.Thread(target=waitForResponse, args=(clientSocket,))
 t.daemon = True
 t.start()
+t = threading.Thread(target=initialize)
+t.daemon = True
+t.start()
+t.join()
+
 while True:
     request = raw_input('> ')
     req = request[0]
@@ -194,7 +186,7 @@ while True:
         while end != '.':
             request += '\n' + end # add more to the question
             end = raw_input('') # check period again
-        choices = getValidChoices()
+        choices = getValidChoices(raw_input)
         request += choices # add valid choices and answer
 
     # request = buildRequest(request)

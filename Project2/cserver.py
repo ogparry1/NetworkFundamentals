@@ -77,7 +77,7 @@ def killAllConnections():
         try:
             sendResponse(tup[0], 'EXIT')
             connection.close()
-            # print('Client {} disconnected'.format(tup[1][1]))
+            debug('Client {} disconnected'.format(tup[1][1]))
         except:
             pass
     print('Terminating server...')
@@ -108,7 +108,6 @@ def sendQuestion(contestant, response, question):
     return
 
 def getContestant(conn, addr, contest):
-    # print('Getting Contestant')
     while True:
         request = getRequest(conn)
         req = request[0]
@@ -160,7 +159,6 @@ def runContest(contestData, contest, questions):
     conns = []
 
     # Get Contestants
-    # print('Taking participants')
     cthread = threading.Thread(target = acceptClients, args = (contest,))
     cthread.daemon = True
     cthread.start()
@@ -171,7 +169,6 @@ def runContest(contestData, contest, questions):
         return
 
     # Serve the questions
-    # print('Serving Questions')
     qq = Queue()
     threads = []
     for num in contest['questions']:
@@ -237,9 +234,8 @@ def hostMeister(connectionSocket, addr):
     while True:
         # Get a request
         request = getRequest(connectionSocket)
-        debug(request)
         req = request[0].split()
-        debug(str(request))
+        debug(str(req))
 
         # Take arguments and service the request
         if req[0] in ['p','put']:
@@ -276,11 +272,13 @@ def hostMeister(connectionSocket, addr):
                 if num not in questions.keys():
                     response = 'Error: question {} not found.'.format(num)
                 else:
+                    print('key exists')
                     qdata = questions[num]
                     response = '{}\n{}\n.\n'.format(qdata['tags'], qdata['question'])
                     for key, val in qdata['choices'].items():
                         response += '({}) {}\n.\n'.format(key,val)
                     response += '.\n{}'.format(qdata['answer'])
+                    print(response)
                 sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
@@ -318,16 +316,18 @@ def hostMeister(connectionSocket, addr):
             try:
                 response = 'No contests have been set.'
                 for (num, contest) in contests.items():
+                    contest = contests[num]
                     contestants = contest['contestants']
+                    qnums = contest['questions']
                     numcontestants = len(contestants)
+                    numquestions = len(qnums)
                     status = contest['status']
-                    total = len(contest['questions'])
-                    response = '{}\t{} questions, {}'.format(num, total, status)
+                    response = '{}\t{} questions, {}'.format(num,numquestions,status)
                     if status == 'run':
-                        contestantcorrect = contestants.sum(axis=0)
-                        # totalcorrect = contestants.sum(axis=1)
-                        avgcorrect = np.average(contestantcorrect)
-                        response += ', average correct: {}; maximum correct: {}'.format(round(avgcorrect,2),total)
+                        contestantcorrect = np.sum(contestants,axis=0)
+                        totalcorrect = np.sum(contestants,axis=1)
+                        avgcorrect = np.average(totalcorrect)
+                        response += ', average correct: {}; maximum correct: {}'.format(round(avgcorrect,2),numquestions)
                 sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
@@ -379,10 +379,9 @@ def hostMeister(connectionSocket, addr):
                 if num not in contests.keys():
                     response = 'Error: Contest {} does not exist.'.format(num)
                 else:
-                    # printDictionary(str(contest))
                     contest = contests[num]
                     contestants = contest['contestants']
-                    qnums = contest['questions']
+                    qnums = sorted(contest['questions'])
                     numcontestants = len(contestants)
                     numquestions = len(qnums)
                     status = contest['status']
@@ -391,7 +390,7 @@ def hostMeister(connectionSocket, addr):
                         contestantcorrect = np.sum(contestants,axis=0)
                         totalcorrect = np.sum(contestants,axis=1)
                         avgcorrect = np.average(totalcorrect)
-                        response += ', average correct: {}; maximum correct: {}'.format(avgcorrect,numquestions)
+                        response += ', average correct: {}; maximum correct: {}'.format(round(avgcorrect,2),numquestions)
                         for i in range(0,numquestions):
                             num = qnums[i]
                             percent = int(contestantcorrect[i]*100/numcontestants)
