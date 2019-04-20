@@ -23,6 +23,10 @@ def sortDictionary(dict):
 def loadJSON(dict):
     return json.loads(dict)
 
+def updateJSON():
+    with open('qbank','w+') as f:
+        json.dump(qbank, f)
+
 ## Server Functions ##
 def sendResponse(socket, message):
     socket.send(message.encode())
@@ -104,7 +108,7 @@ def acceptClients(contest):
         t.start()
 
 
-def runContest(contestData, contest, questions):
+def runContest(contestData, contest):
 
     def qthreader(qq):
         contestant, response, question = qq.get()
@@ -144,7 +148,7 @@ def runContest(contestData, contest, questions):
     threads = []
     for num in contest['questions']:
         # names = contestants.keys()
-        question = questions[num]
+        question = qbank[num]
         response = question['question']
         choices = question['choices']
         for key in sorted(choices.keys()):
@@ -194,13 +198,12 @@ def hostMeister(connectionSocket, addr):
     contest_threads = []
     contests = {}
     sessions = {}
-    questions = {}
-    db[str(addr)] = {
-        'socket': connectionSocket,
-        'contests': contests,
-        'sessions': sessions,
-        'questions': questions 
-    }
+    # db[str(addr)] = {
+        # 'socket': connectionSocket,
+        # 'contests': contests,
+        # 'sessions': sessions,
+        # 'questions': questions 
+    # }
 
     # Handle Requests from Connected Meister
     while True:
@@ -212,9 +215,9 @@ def hostMeister(connectionSocket, addr):
         # Take arguments and service the request
         if req[0] in ['p','put']:
             try:
-                num = int(req[1])
+                num = req[1]
                 response = ''
-                if int(num) in questions.keys():
+                if num in qbank.keys():
                     response = 'Error: question number {} already used.'.format(num)
                 else:
                     response = 'Question {} added.'.format(num)
@@ -231,7 +234,8 @@ def hostMeister(connectionSocket, addr):
                                 question['answer'] = request[i+1].strip()
                                 break
                         question['choices'][request[i][1]] = request[i][3:].strip()
-                    questions[num] = question
+                    qbank[num] = question
+                updateJSON()
                 sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
@@ -239,12 +243,12 @@ def hostMeister(connectionSocket, addr):
         elif req[0] in ['g','get']:
             # Get a question
             try:
-                num = int(req[1])
+                num = req[1]
                 response = ''
-                if num not in questions.keys():
+                if num not in qbank.keys():
                     response = 'Error: question {} not found.'.format(num)
                 else:
-                    qdata = questions[num]
+                    qdata = qbank[num]
                     response = '{}\n{}\n.\n'.format(qdata['tags'], qdata['question'])
                     for key, val in qdata['choices'].items():
                         response += '({}) {}\n.\n'.format(key,val)
@@ -256,9 +260,10 @@ def hostMeister(connectionSocket, addr):
         elif req[0] in ['d','delete']:
             # Delete a question
             try:
-                num = int(req[1])
-                questions.pop(num, None)
+                num = req[1]
+                qbank.pop(num, None)
                 response = 'Deleted question {}'.format(num)
+                updateJSON()
                 sendResponse(connectionSocket, response)
             except Exception as e:
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
@@ -266,7 +271,7 @@ def hostMeister(connectionSocket, addr):
         elif req[0] in ['s','set']:
             # Set a new contest
             try:
-                num = int(req[1])
+                num = req[1]
                 response = ''
                 if num in contests.keys():
                     response = 'Error: Contest {} already exists.'.format(num)
@@ -307,11 +312,11 @@ def hostMeister(connectionSocket, addr):
             # Append question to contest
             try:
                 response = ''
-                cnum = int(req[1])
-                qnum = int(req[2])
+                cnum = req[1]
+                qnum = req[2]
                 if cnum not in contests.keys():
                     response = 'Error: Contest {} does not exist.'.format(cnum)
-                elif qnum not in questions.keys():
+                elif qnum not in qbank.keys():
                     response = 'Error: Question {} does not exist.'.format(qnum)
                 else:
                     response = 'Added question {} to contest {}'.format(qnum,cnum)
@@ -323,7 +328,7 @@ def hostMeister(connectionSocket, addr):
         elif req[0] in ['b','begin']:
             # Begin a contest
             try:
-                num = int(req[1])
+                num = req[1]
                 contestSocket, cPort = setupContestSocket() # Get the meister socket
                 contestData = contests[num]
                 contest = sessions[cPort] = {
@@ -334,7 +339,7 @@ def hostMeister(connectionSocket, addr):
                     'registered': [],
                     'contestants': {}, # each entry is nickname: { personal stats }
                 }
-                t = threading.Thread(target = runContest, args = (contestData, contest, questions))
+                t = threading.Thread(target = runContest, args = (contestData, contest))
                 t.daemon = True
                 t.start()
                 print('Contest {} started on port {}'.format(num,cPort))
@@ -345,7 +350,7 @@ def hostMeister(connectionSocket, addr):
         elif req[0] in ['r','review']:
             # Review a contest
             try:
-                num = int(req[1])
+                num = req[1]
                 response = ''
                 if num not in contests.keys():
                     response = 'Error: Contest {} does not exist.'.format(num)
@@ -381,8 +386,10 @@ def hostMeister(connectionSocket, addr):
                 sendResponse(connectionSocket, 'Error cserver get: {}'.format(e))
                 continue
         elif req[0] in ['k','kill']:
+            updateJSON()
             killAllConnections()
         elif req[0] in ['q','quit']:
+            updateJSON()
             sendResponse(connectionSocket,'EXIT')
             connectionSocket.close()
             debug('Meister {} disconnected'.format(addr[1]))
@@ -407,10 +414,18 @@ def mthreader():
     mq.task_done()
 
 ## Start of the Program ##
-global mq, db, allcons
-db = {}
+global mq, allcons, qbank
 allcons = []
 mq = Queue()
+
+try:
+    with open('qbank', 'r') as f:
+        data = f.read()
+        qbank = json.loads(data)
+except Exception as e:
+    print(e)
+    qbank = {}
+    updateJSON()
 
 ## Network Setup ##
 # Setup hostname and port number for meister

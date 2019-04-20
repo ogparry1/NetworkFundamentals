@@ -110,7 +110,8 @@ def waitForResponse(clientSocket):
 ## Start of the client program ##
 # Connect to the server
 try:
-    serverName = 'storm.cise.ufl.edu'
+    serverName = gethostname()
+    # serverName = 'storm.cise.ufl.edu'
     serverPort = int(sys.argv[1])
 except Exception as e:
     print("Error: " + str(e))
@@ -177,6 +178,8 @@ t.join()
 
 while True:
     request = raw_input('> ')
+    if request == '':
+        continue
     req = request[0]
 
     if req == 'p':
