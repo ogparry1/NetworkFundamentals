@@ -110,12 +110,12 @@ def waitForResponse(clientSocket):
 ## Start of the client program ##
 # Connect to the server
 try:
-    serverName = gethostname()
-    # serverName = 'storm.cise.ufl.edu'
+    # serverName = gethostname()
+    serverName = 'storm.cise.ufl.edu'
     serverPort = int(sys.argv[1])
 except Exception as e:
     print("Error: " + str(e))
-    print("Error: qclient takes exactly 2 arguments\nEx:    contestmeister <hostname> <portnumber>")
+    print("Error: contestmeister takes 1 arguments and 1 optional\nEx:    contestmeister <portnumber> [init.txt]")
     sys.exit(-1)
 
 try:
@@ -123,8 +123,10 @@ try:
     clientSocket.connect((serverName,serverPort))
     print('Connected to Server')
 except Exception as e:
-    print("Error: " + str(e))
-    sys.exit(-1)
+    clientSocket.connect((gethostname(),serverPort))
+    print('Connected to Server')
+    # print("Error: " + str(e))
+    # sys.exit(-1)
 
 # Interface with server
 global response, lineq

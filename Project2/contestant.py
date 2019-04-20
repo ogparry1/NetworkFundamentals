@@ -15,12 +15,6 @@ def getResponse(socket):
     res = socket.recv(2048).decode()
     return res
 
-def buildRequest(arr):
-    requestStr = ""
-    for e in arr:
-        requestStr = requestStr + e + "\\"
-    return requestStr[:-1]
-
 def inputName(clientSocket):
     nickname = ''
     while True:
@@ -33,7 +27,9 @@ def inputName(clientSocket):
     return nickname
 
 def makeChoice(socket, stats):
-    choice = raw_input('Enter your choice: ')
+    choice = ''
+    while choice == '':
+        choice = raw_input('Enter your choice: ')
     sendRequest(socket, choice)
     stats = getResponse(socket)
     print(stats)
@@ -53,18 +49,9 @@ try:
     clientSocket.connect((serverName,serverPort))
     debug('Connected to Server') 
 except Exception as e:
-    print ("Error: {}".format(e))
-    sys.exit(-1)
-
-def exitListen(socket):
-    while True:
-        # with listen_lock:
-        response = str(clientSocket.recv(2048).decode())
-        if response.find('EXIT') != -1 or response.find('FINISHED') != -1:
-            print('The contest is over - thanks for playing {}!'.format(name))
-            os._exit(0)
-        else:
-            time.sleep(1)
+    clientSocket.connect((gethostname(),serverPort))
+    # print ("Error: {}".format(e))
+    # sys.exit(-1)
 
 name = inputName(clientSocket)
 qcount = 0

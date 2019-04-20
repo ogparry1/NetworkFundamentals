@@ -9,25 +9,15 @@ import numpy as np
 import ctypes as ct
 import operator
 
+## Server Functions ##
 def debug(info):
     if '-d' in sys.argv:
         print(str(info))
-
-def printDictionary(dict):
-    print(json.dumps(dict, indent=4))
-
-def sortDictionary(dict):
-    d_sorted = sorted(dict.items(), key=operator.itemgetter(0))
-    return d_sorted
-
-def loadJSON(dict):
-    return json.loads(dict)
 
 def updateJSON():
     with open('qbank','w+') as f:
         json.dump(qbank, f)
 
-## Server Functions ##
 def sendResponse(socket, message):
     socket.send(message.encode())
 
@@ -36,16 +26,6 @@ def getRequest(socket):
     result = req.split("\n")
     debug(result[0])
     return result
-
-def buildResponse(arr):
-    response = ''
-    for e in arr:
-        response += '{}\n'.format(e)
-    return response
-
-def helpPage():
-    page = '--------------------------------------------------------------------------------------------------\n\nThis program is a multi-threaded sockets program which allows users to create, update, start and review contests and to take part in those contests as well.\n\nUsage is as follows:\n> p <qn> :: Use \'p\' to insert a new question.\n\t:: Input question tags as comma separated list\n\t:: Input question followed by a period: \'question <CR> . <CR>\'\n\t:: Input answer choices as follows: \'(<letter>) choice <CR> . <CR>\'\n\t:: When finished inputing choices, enter a second period before the answer\n\t:: Input letter of correct answer choice\n\t>> Server will Error if the question already exists for the current meister\n\n> d <qn> :: Use \'d\' to delete a question with id == qn\n\t>> Server will delete the indicated question\n\n> g <qn> :: Use \'g\' to see the question with id == qn\n\t>> Server will output the question as it was input\n\n> s <cn> :: Use \'s\' to setup a new contest\n\n> b <cn> :: Use \'b\' to allocate a socket for a new instance of a contest which runs until finished\n\t:: Will pass the port number back to the meister\n\t:: A single contest can have multiple instances of itself started.\n\n> r <qn> :: Use \'r\' to review statistics on a set contest\n\t>> Server will output overall statistics of the contest\n\t>> If the contest has been run, statistics on each question are provided\n\n> a <cn> <qn> :: Use \'a\' to append a question to a set contest\n\t>> Server outputs an error if either the contest or the question don\'t exist\n\n> k :: Use \'k\' to terminate the server and all clients\n\n> q :: Use \'q\' to terminate just the current meister\n\n> h :: Use \'h\' to display this page again\n\n--------------------------------------------------------------------------------------------------\n\n'
-    return page
 
 def killAllConnections():
     for tup in allcons:
@@ -58,19 +38,10 @@ def killAllConnections():
     print('Terminating server...')
     os._exit(0)
 
-# def waitForThreads(conns, contest, threads):
-    # dead = 0
-    # end = time.time() + 60
-    # while time.time() < end and dead != len(threads):
-        # dead = 0
-        # for t in threads:
-            # if not t.isAlive():
-                # dead += 1
-    # for conn in conns:
-        # if conn not in contest['connections']:
-            # sendResponse(conn, 'EXIT')
-            # conn.close()
-    # return []
+def helpPage():
+    page = '--------------------------------------------------------------------------------------------------\n\nThis program is a multi-threaded sockets program which allows users to create, update, start and review contests and to take part in those contests as well.\n\nUsage is as follows:\n> p <qn> :: Use \'p\' to insert a new question.\n\t:: Input question tags as comma separated list\n\t:: Input question followed by a period: \'question <CR> . <CR>\'\n\t:: Input answer choices as follows: \'(<letter>) choice <CR> . <CR>\'\n\t:: When finished inputing choices, enter a second period before the answer\n\t:: Input letter of correct answer choice\n\t>> Server will Error if the question already exists for the current meister\n\n> d <qn> :: Use \'d\' to delete a question with id == qn\n\t>> Server will delete the indicated question\n\n> g <qn> :: Use \'g\' to see the question with id == qn\n\t>> Server will output the question as it was input\n\n> s <cn> :: Use \'s\' to setup a new contest\n\n> b <cn> :: Use \'b\' to allocate a socket for a new instance of a contest which runs until finished\n\t:: Will pass the port number back to the meister\n\t:: A single contest can have multiple instances of itself started.\n\n> r <qn> :: Use \'r\' to review statistics on a set contest\n\t>> Server will output overall statistics of the contest\n\t>> If the contest has been run, statistics on each question are provided\n\n> a <cn> <qn> :: Use \'a\' to append a question to a set contest\n\t>> Server outputs an error if either the contest or the question don\'t exist\n\n> k :: Use \'k\' to terminate the server and all clients\n\n> q :: Use \'q\' to terminate just the current meister\n\n> h :: Use \'h\' to display this page again\n\n--------------------------------------------------------------------------------------------------\n\n'
+    return page
+
 
 def sendQuestion(contestant, response, question):
     contestant['correct'].append(0)
@@ -198,12 +169,6 @@ def hostMeister(connectionSocket, addr):
     contest_threads = []
     contests = {}
     sessions = {}
-    # db[str(addr)] = {
-        # 'socket': connectionSocket,
-        # 'contests': contests,
-        # 'sessions': sessions,
-        # 'questions': questions 
-    # }
 
     # Handle Requests from Connected Meister
     while True:
